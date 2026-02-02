@@ -1,0 +1,120 @@
+binary:
+  EM_ALL_OPT_OUT_FLAG:
+    true_values:
+    - '1'
+    - y
+    - 'yes'
+    - 'true'
+  POS_LAST_ORDER_DPA:
+    true_values:
+    - '1'
+    - y
+    - 'yes'
+    - 'true'
+  SH_INQUIRED_LAST12MO:
+    true_values:
+    - '1'
+    - y
+    - 'yes'
+    - 'true'
+  SH_INQUIRED_LAST3MO:
+    true_values:
+    - '1'
+    - y
+    - 'yes'
+    - 'true'
+continuous:
+  EM_COUNT_VALID:
+    fill_value: 2.271579669544337
+    mean: 2.271579669544337
+    std: 5.4566327404066675
+  EM_MONTHS_LAST_OPEN:
+    fill_value: 12.351129213240565
+    mean: 12.351129213240565
+    std: 12.6099219390557
+  EM_NUM_OPEN_30:
+    fill_value: 114.90811659975563
+    mean: 114.90811659975563
+    std: 150.3954833062994
+  HH_AGE:
+    fill_value: 60.1824425915801
+    mean: 60.182442591580084
+    std: 8.309080692982636
+  HH_INCOME:
+    fill_value: 99439.36899985139
+    mean: 99439.36899985142
+    std: 31473.774012899827
+  IID_COUNT:
+    fill_value: 10.786736104413798
+    mean: 10.786736104413794
+    std: 29.59773287008655
+  POS_LAST_TOTAL_REVENUE:
+    fill_value: 443.5975804924141
+    mean: 443.5975804924141
+    std: 579.423079961977
+  POS_MARGIN_TOTAL:
+    fill_value: 573.7113589484971
+    mean: 573.7113589484971
+    std: 21599.4892298781
+  POS_MARGIN_TOTAL_12MO:
+    fill_value: 146.52848979629255
+    mean: 146.52848979629252
+    std: 6833.077870041986
+  POS_MNTHS_LAST_ORDER:
+    fill_value: 10.709309593142159
+    mean: 10.709309593142159
+    std: 7.193189193351539
+  POS_NUM_ORDERS:
+    fill_value: 7.071568866852817
+    mean: 7.071568866852817
+    std: 10.858584059416424
+  POS_NUM_ORDERS_24MO:
+    fill_value: 2.1351962543396787
+    mean: 2.1351962543396787
+    std: 2.524821381866584
+  POS_REVENUE_BASE:
+    fill_value: 2127.548698287486
+    mean: 2127.548698287486
+    std: 22823.69550093368
+  POS_REVENUE_BASE_SP_6MO:
+    fill_value: 599.7442454183266
+    mean: 599.7442454183266
+    std: 3511.7515519038634
+  POS_REVENUE_TOTAL:
+    fill_value: 3161.6624941235173
+    mean: 3161.6624941235173
+    std: 23611.727692217813
+  POS_REVENUE_TOTAL_6MO:
+    fill_value: 675.5913719203187
+    mean: 675.5913719203187
+    std: 3534.182425876675
+  POS_SP_QTY_24MO:
+    fill_value: 6.703054496809607
+    mean: 6.703054496809607
+    std: 199.65023227514786
+  POS_TOT_REVPERSYS:
+    fill_value: 1401.7910182566172
+    mean: 1401.7910182566172
+    std: 10747.107134456333
+  SH_MNTHS_LAST_INQUIRED:
+    fill_value: 62.919790899067586
+    mean: 62.919790899067586
+    std: 21.481365376196237
+  WEB_CNT_IID_ACCESSED:
+    fill_value: 0.8897032822194362
+    mean: 0.8897032822194362
+    std: 0.6094359658502647
+  WEB_MNTHS_SINCE_LAST_SES:
+    fill_value: 4.635640861644974
+    mean: 4.6356408616449745
+    std: 4.126954266930886
+  id:
+    fill_value: 47095.0
+    mean: 47095.0
+    std: 27190.166589535023
+  pos_mo_btwn_fst_lst_order:
+    fill_value: 52.503769874328555
+    mean: 52.503769874328555
+    std: 38.01066621469018
+nominal: {}
+ordinal: {}

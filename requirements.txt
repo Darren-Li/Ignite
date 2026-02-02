@@ -1,0 +1,10 @@
+streamlit
+pandas
+numpy
+sqlalchemy
+pymysql
+psycopg2-binary
+statsmodels
+openpyxl
+ydata-profiling
+streamlit-pandas-profiling

@@ -1,0 +1,270 @@
+binary:
+  first_order_channel_grp:
+    true_values:
+    - '1'
+    - y
+    - 'yes'
+    - 'true'
+  frisomum:
+    true_values:
+    - '1'
+    - y
+    - 'yes'
+    - 'true'
+  gold:
+    true_values:
+    - '1'
+    - y
+    - 'yes'
+    - 'true'
+  prestige:
+    true_values:
+    - '1'
+    - y
+    - 'yes'
+    - 'true'
+  stage_f0:
+    true_values:
+    - '1'
+    - y
+    - 'yes'
+    - 'true'
+  stage_f1:
+    true_values:
+    - '1'
+    - y
+    - 'yes'
+    - 'true'
+  stage_f2:
+    true_values:
+    - '1'
+    - y
+    - 'yes'
+    - 'true'
+  stage_f3:
+    true_values:
+    - '1'
+    - y
+    - 'yes'
+    - 'true'
+  stage_f4:
+    true_values:
+    - '1'
+    - y
+    - 'yes'
+    - 'true'
+continuous:
+  baby_age_first_order:
+    fill_value: 5.691602187833511
+    mean: 5.691602187833511
+    std: 17.805978676002663
+  baby_age_last_order:
+    fill_value: 7.131169957310566
+    mean: 7.131169957310566
+    std: 17.945106236702237
+  baby_residual_lifecycle:
+    fill_value: 1289.562696448873
+    mean: 1289.5626964488733
+    std: 187.21544866529032
+  cltv:
+    fill_value: 7.240383333333332
+    mean: 7.240383333333332
+    std: 17.009504532699133
+  customer_lifecycle:
+    fill_value: 417.1313333333333
+    mean: 417.1313333333333
+    std: 124.52716913223263
+  first_order_jar:
+    fill_value: 1.8259
+    mean: 1.8259
+    std: 5.550713125703871
+  first_repurchase_interval:
+    fill_value: 98.3993578387954
+    mean: 98.39935783879538
+    std: 77.28874003061793
+  last_repurchase_interval:
+    fill_value: 106.69086576648134
+    mean: 106.69086576648132
+    std: 103.05728304412813
+  order_conversion_jar:
+    fill_value: 1.738201
+    mean: 1.738201
+    std: 5.033917633197493
+nominal:
+  first_order_province:
+    categories:
+    - nan
+    - 上海
+    - 上海市
+    - 不伦瑞克
+    - 不来梅
+    - 东区
+    - 丰沙尔
+    - 九龙城区
+    - 云南
+    - 云南省
+    - 仁川
+    - 伊丽莎白港
+    - 伦敦
+    - 伯南布哥
+    - 佛罗伦萨
+    - 克恩顿
+    - 内蒙古
+    - 内蒙古自治区
+    - 凯里
+    - 利特里姆
+    - 加拉加斯
+    - 北京
+    - 北京市
+    - 北岸
+    - 北米拉杜马杜卢
+    - 北部地区
+    - 南宽扎
+    - 南澳大利亚
+    - 南米拉杜马杜卢
+    - 南苏瓦迪瓦
+    - 南蒂拉杜马蒂
+    - 台北市
+    - 台湾
+    - 吉林
+    - 吉林省
+    - 嘉义县
+    - 四川
+    - 四川省
+    - 基尔代尔
+    - 基尔肯尼
+    - 堪培拉
+    - 塔斯马尼亚
+    - 多伦多
+    - 多内加尔
+    - 大阪
+    - 天津
+    - 天津市
+    - 天猫
+    - 奥克兰
+    - 奥法利
+    - 威尔士
+    - 宁夏
+    - 宁夏回族自治区
+    - 安徽
+    - 安徽省
+    - 宜兰县
+    - 山东
+    - 山东省
+    - 山西
+    - 山西省
+    - 巴厘
+    - 巴黎
+    - 布尔根兰
+    - 布达佩斯
+    - 广东
+    - 广东省
+    - 广西
+    - 广西壮族自治区
+    - 扎伊尔
+    - 新疆
+    - 新疆维吾尔自治区
+    - 施蒂利亚
+    - 曼谷
+    - 本格拉
+    - 森美兰
+    - 比勒费尔德
+    - 氹仔
+    - 江苏
+    - 江苏省
+    - 江西
+    - 江西省
+    - 沃特福德
+    - 沙夫豪森
+    - 沙迦
+    - 河北
+    - 河北省
+    - 河南
+    - 河南省
+    - 浙江
+    - 浙江省
+    - 海南
+    - 海南省
+    - 温哥华
+    - 湖北
+    - 湖北省
+    - 湖南
+    - 湖南省
+    - 热那亚
+    - 玻璃市
+    - 甘肃
+    - 甘肃省
+    - 电商
+    - 福建
+    - 福建省
+    - 离岛区
+    - 穆拉库
+    - 米斯
+    - 索洛图恩
+    - 纳米贝
+    - 维也纳
+    - 维多利亚
+    - 罗安达
+    - 艾克斯
+    - 苏格兰
+    - 苏黎世
+    - 英格兰
+    - 莫斯科
+    - 萨尔茨堡
+    - 蒂华纳
+    - 西澳大利亚
+    - 西米斯
+    - 西藏
+    - 贵州
+    - 贵州省
+    - 辽宁
+    - 辽宁省
+    - 迪拜
+    - 都柏林
+    - 里瓦达维亚海军准将城
+    - 重庆
+    - 重庆市
+    - 釜山
+    - 阿克里
+    - 阿姆斯特丹
+    - 阿巴坎
+    - 陕西
+    - 陕西省
+    - 青海
+    - 青海省
+    - 顿河畔罗斯托夫
+    - 首尔
+    - 香港
+    - 马兰热
+    - 马德里
+    - 马累
+    - 马累岛
+    - 黑龙江
+    - 黑龙江省
+  first_order_province_grp:
+    categories:
+    - North
+    - South
+    - Unk
+    - West
+  reg_channel:
+    categories:
+    - CRM系统
+    - KA合作伙伴
+    - 一号店
+    - 京东商城
+    - 其他
+    - 品牌微信
+    - 天猫旗舰店
+    - 官方网站
+    - 电商平台
+    - 线下
+    - 美囤
+    - 苏宁
+    - 蜜芽
+  reg_channel_grp:
+    categories:
+    - Offline
+    - Online
+    - Others
+ordinal: {}

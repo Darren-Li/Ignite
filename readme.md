@@ -1,12 +1,12 @@
 # 📊 Ignite - Data Analytics Platform
 
-A data analytics platform that can be used without deep knowledge of algorithms
+A data analytics platform that can be used without deep knowledge of algorithms.
 
 ![Python](https://img.shields.io/badge/Python-3.10-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Status](https://img.shields.io/badge/Status-Active-success)
 
-
+[![English](https://img.shields.io/badge/English-d9d9d9?style=for-the-badge)](readme.md)
 [![简体中文](https://img.shields.io/badge/简体中文-d9d9d9?style=for-the-badge)](docs/readme/zh-CN.md)
 
 ---

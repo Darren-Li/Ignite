@@ -1,3 +1,4 @@
+setuptools>=60.0.0  # 确保 setuptools 被安装且版本不要太旧
 streamlit
 pandas
 numpy
@@ -8,3 +9,6 @@ statsmodels
 openpyxl
 ydata-profiling
 streamlit-pandas-profiling
+plotly
+scikit-learn
+xgboost

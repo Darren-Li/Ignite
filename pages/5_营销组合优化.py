@@ -284,9 +284,7 @@ if step == 'Step 1 – Exploratory Data Analysis' and st.session_state.df is not
 
     st.markdown(f"""
     **数据总览：**
-    - 行数: `{num_rows}`, 列数: `{num_cols}`
-    - 时间范围: `{start_date}` ~ `{end_date}`
-    - 目标变量: `{target_col}`
+    行数: `{num_rows}`, 列数: `{num_cols}`;      时间范围: `{start_date}` ~ `{end_date}`;      目标变量: `{target_col}`
     """)
 
     # ---------------------------

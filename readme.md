@@ -1,53 +1,65 @@
-项目路径：C:\Users\lwq07\Aha\Ignite
+# 📊 Ignite - Data Analytics Platform
 
-启动命令：
-在项目路径下启动终端
-1. 启动python虚拟环境
-	conda activate prophet_env
-2. 启动项目
-	cd Aha\Ignite
-	streamlit run Ignite.py
+A data analytics platform that can be used without deep knowledge of algorithms
 
+![Python](https://img.shields.io/badge/Python-3.10-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Status](https://img.shields.io/badge/Status-Active-success)
 
-C:\Users\lwq07\Aha\Ignite\db\app.db
+---
 
+## 📖 Project Overview
 
-项目目录
-streamlit_anomaly_app/
-│
-├─ app.py                      # Streamlit 主入口
-├─ requirements.txt            # 依赖
-│
-├─ data/
-│   ├─ raw/                    # 原数据（标签：原数据）
-<!-- │   └─ analysis/                # 分析结果数据（标签：分析结果） -->
-│   └─ profiling               # data profiling 
-│
-├─ db/
-│   └─ app.db                  # Sqlite 数据库
-│
-├─ services/
-│   ├─ db_service.py           # 数据库连接 & 元数据管理
-│   ├─ data_loader.py          # 文件 / DB 数据加载
-│
-├─ pages/
-│   ├─ 1_数据管理.py
-│   └─ 2_异常分析.py
-│   └─ 3_聚类分析.py
-│   └─ 4_预测分析.py
-│   └─ 5_营销组合优化.py
-│
-├─ config/
-│   ├─ 
-│   └─ 
-│
-├─ models/
-│   ├─ 
-│   └─ 
-│
-├─ outputs/
-│   ├─ 
-│   └─ 
-│
-└─ utils/
-    └─ helpers.py              # 公共工具函数
+- This is a lightweight tool written by an experienced data analyst for users who do not deeply understand data analysis but still have data analysis needs. It helps them solve common data analysis problems and supports them in completing their work or personal ideas more effectively!
+
+---
+
+## ✨ Features
+
+- 📂 Feature 1: Data Management  
+- ⚠️ Feature 2: Anomaly Analysis  
+- 👥 Feature 3: Clustering Analysis  
+- 📈 Feature 4: Predictive Analysis (Regression / Classification)  
+- 💹 Feature 5: Marketing Mix Optimization  
+
+---
+
+## ⚙️ Installation and Usage
+
+clone the project
+```
+git clone https://github.com/Darren-Li/Ignite.git
+cd Ignite
+```
+
+Requirements
+```python
+pip install -r requirements.txt
+```
+
+Run the Ignite app
+```
+streamlit run ignite.py
+```
+
+---
+
+## ▶️ Demo 
+- 📜 Feature Overview
+	- ![demo](/docs/img/0.1home.png)
+- 📂 Data Management
+	- ![demo](/docs/img/1.1data_management.png)
+- ⚠️ Anomaly Analysis
+	- ![demo](/docs/img/2.1abnormal_analysis.png)
+	- ![demo](/docs/img/2.2abnormal_analysis.png)
+- 👥 Clustering Analysis
+	- ![demo](/docs/img/3.1clustering_analysis.png)
+	- ![demo](/docs/img/3.2clustering_analysis.png)
+	- ![demo](/docs/img/3.3clustering_analysis.png)
+	- ![demo](/docs/img/3.4clustering_analysis.png)
+	- ![demo](/docs/img/3.5clustering_analysis.png)
+	- ![demo](/docs/img/3.6clustering_analysis.png)
+- 📈 Predictive Analysis (Regression / Classification)
+	- ![demo](/docs/img/4.1predictive_analysis_calssification.png)
+- 💹 Marketing Mix Optimization
+	- ![demo](/docs/img/5.1MMO.png)

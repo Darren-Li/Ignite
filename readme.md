@@ -6,6 +6,8 @@ A data analytics platform that can be used without deep knowledge of algorithms
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Status](https://img.shields.io/badge/Status-Active-success)
 
+![中文简体](/docs/readme/zh-CN.md)
+
 ---
 
 ## 📖 Project Overview

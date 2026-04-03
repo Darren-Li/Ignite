@@ -22,3 +22,7 @@ Thumbs.db
 
 # 日志
 *.log
+
+# 忽略根目录下的 temp 文件夹及其所有内容
+/data/profiling/
+/data/raw/

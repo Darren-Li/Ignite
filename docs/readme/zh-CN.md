@@ -47,20 +47,20 @@ streamlit run ignite.py
 
 ## ▶️ 示例效果 
 - 📜 功能总览：
-	- ![demo](/docs/img/0.1home.png)
+	![demo](/docs/img/0.1home.png)
 - 📂 数据管理
-	- ![demo](/docs/img/1.1data_management.png)
+	![demo](/docs/img/1.1data_management.png)
 - ⚠️ 异常分析
-	- ![demo](/docs/img/2.1abnormal_analysis.png)
-	- ![demo](/docs/img/2.2abnormal_analysis.png)
+	![demo](/docs/img/2.1abnormal_analysis.png)
+	![demo](/docs/img/2.2abnormal_analysis.png)
 - 👥 聚类分析
-	- ![demo](/docs/img/3.1clustering_analysis.png)
-	- ![demo](/docs/img/3.2clustering_analysis.png)
-	- ![demo](/docs/img/3.3clustering_analysis.png)
-	- ![demo](/docs/img/3.4clustering_analysis.png)
-	- ![demo](/docs/img/3.5clustering_analysis.png)
-	- ![demo](/docs/img/3.6clustering_analysis.png)
+	![demo](/docs/img/3.1clustering_analysis.png)
+	![demo](/docs/img/3.2clustering_analysis.png)
+	![demo](/docs/img/3.3clustering_analysis.png)
+	![demo](/docs/img/3.4clustering_analysis.png)
+	![demo](/docs/img/3.5clustering_analysis.png)
+	![demo](/docs/img/3.6clustering_analysis.png)
 - 📈 预测分析（回归/分类）
-	- ![demo](/docs/img/4.1predictive_analysis_calssification.png)
+	![demo](/docs/img/4.1predictive_analysis_calssification.png)
 - 💹 营销组合优化
-	- ![demo](/docs/img/5.1MMO.png)
+	![demo](/docs/img/5.1MMO.png)

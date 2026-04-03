@@ -1,7 +1,7 @@
-setuptools>=60.0.0  # 确保 setuptools 被安装且版本不要太旧
-streamlit
-pandas
-numpy
+setuptools>=44.0.0,<80.0.0  # 限制版本范围，避免新版本兼容性问题
+streamlit==1.38.0
+pandas==2.0.3
+numpy==1.24.3
 sqlalchemy
 pymysql
 psycopg2-binary

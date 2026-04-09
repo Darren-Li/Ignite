@@ -5,6 +5,7 @@ import math
 import plotly.express as px
 from pathlib import Path
 import yaml
+import os
 
 from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 from sklearn.impute import SimpleImputer, KNNImputer

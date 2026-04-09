@@ -142,7 +142,7 @@ if step == 'Step 0 – Data & Variables':
 
         # 如果没有，就根据简单规则判断
         if default_value is None:
-            if '_id' in c.lower():
+            if 'id' in c.lower() or '_id' in c.lower():
                 default_value = 'id'
             elif c_unique == 2:
                 default_value = 'binary'

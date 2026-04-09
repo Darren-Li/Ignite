@@ -146,7 +146,11 @@ if step == 'Step 0 – Data & Variables':
         path = sources.loc[sources["name"] == src, "path"].values[0]
 
         try:
-            df = pd.read_csv(path)
+            if os.path.exists(path):
+                df = pd.read_csv(path)
+            else:
+                path = path.replace("\\", "/")
+                df = pd.read_csv(path)
         except Exception as e:
             st.error(f"Failed to load data: {e}")
             st.stop()
@@ -820,7 +824,7 @@ if step == 'Step 4 – Media Deep Dive' and 'model' in st.session_state:
         ax.set_title("In-Sample and Out-of-Sample Predictions", fontsize=16, fontweight="bold")
 
         return fig, ax
-        
+
     config = st.session_state.var_config
     time_col, target_col = get_k_by_v(config, "datetime"), get_k_by_v(config, "target")
     media_vars = [k for k, v in config.items() if v == 'media']

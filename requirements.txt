@@ -7,6 +7,7 @@ plotly==6.6.0
 pymc==5.28.3
 pymc_extras==0.10.0
 pymc_marketing==0.19.2
+nutpie==0.16.8
 PyYAML==6.0.3
 scikit_learn==1.8.0
 seaborn==0.13.2

@@ -546,7 +546,6 @@ if step == 'Step 3 – Modeling' and st.session_state.df is not None:
             message_placeholder = st.empty()
 
             message_placeholder.info("⏳ 正在准备数据与划分训练集...")
-            # split data
             train_test_split_date = pd.to_datetime("2025-01-01")
 
             train_mask = df[time_col] < train_test_split_date
@@ -558,13 +557,19 @@ if step == 'Step 3 – Modeling' and st.session_state.df is not None:
             st.session_state.train_df = train_df
             st.session_state.test_df = test_df
 
-            st.write("Sales - Train Test Split")
-            fig, ax = plt.subplots(figsize=(8, 4))
-            sns.lineplot(data=train_df, x=time_col, y=target_col, color="C0", label="Train", ax=ax)
-            sns.lineplot(data=test_df, x=time_col, y=target_col, color="C1", label="Test", ax=ax)
-            ax.set(xlabel="date")
-            ax.set_title("Sales - Train Test Split", fontsize=18, fontweight="bold")
-            st.pyplot(fig, dpi=150)
+            cols = st.columns(2)
+            with cols[0]:
+                st.write("Sales - Train Test Split")
+                fig, ax = plt.subplots(figsize=(8, 4))
+                sns.lineplot(data=train_df, x=time_col, y=target_col, color="C0", label="Train", ax=ax)
+                sns.lineplot(data=test_df, x=time_col, y=target_col, color="C1", label="Test", ax=ax)
+                ax.set(xlabel="date")
+                ax.set_title("Sales - Train Test Split", fontsize=16, fontweight="bold")
+                st.pyplot(fig, dpi=150)
+
+            with cols[1]:
+                st.write(f"Training set: {train_df.shape[0]} observations")
+                st.write(f"Test set: {test_df.shape[0]} observations")
 
             X_train = train_df.drop(columns=target_col)
             X_test = test_df.drop(columns=target_col)
@@ -576,9 +581,6 @@ if step == 'Step 3 – Modeling' and st.session_state.df is not None:
             st.session_state.X_test = X_test
             st.session_state.y_train = y_train
             st.session_state.y_test = y_test
-
-            st.write(f"Training set: {train_df.shape[0]} observations")
-            st.write(f"Test set: {test_df.shape[0]} observations")
 
             message_placeholder.info("🏗️ 正在构建模型结构...")
             sampler_config = {"progressbar": True}
@@ -714,9 +716,9 @@ if step == 'Step 4 – Media Deep Dive' and 'model' in st.session_state:
             fontweight="bold",
             y=1.03,
         )
+
         return fig, ax
 
-    # Get the contribution share samples
     def plot_channel_contribution_share(channel_contribution_share, channel_columns, spend_shares):
         fig, ax = plt.subplots(figsize=(8, 6))
 
@@ -818,7 +820,7 @@ if step == 'Step 4 – Media Deep Dive' and 'model' in st.session_state:
         ax.set_title("In-Sample and Out-of-Sample Predictions", fontsize=16, fontweight="bold")
 
         return fig, ax
-
+        
     config = st.session_state.var_config
     time_col, target_col = get_k_by_v(config, "datetime"), get_k_by_v(config, "target")
     media_vars = [k for k, v in config.items() if v == 'media']

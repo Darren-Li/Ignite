@@ -72,13 +72,13 @@ if step == 'Step 0 – Data & Variables':
     # ========= 只在提交时读数据 =========
     if submitted:
         path = sources.loc[sources["name"] == src, "path"].values[0]
+        if os.path.exists(path):
+            pass
+        else:
+            path = path.replace("\\", "/")
 
         try:
-            if os.path.exists(path):
-                df = pd.read_csv(path)
-            else:
-                path = path.replace("\\", "/")
-                df = pd.read_csv(path)
+            df = pd.read_csv(path)
         except Exception as e:
             st.error(f"Failed to load data: {e}")
             st.stop()
@@ -473,7 +473,11 @@ if step == 'Step 5 – Scoring' and 'kmeans' in st.session_state:
     # ========= 只在提交时运行评分 =========
     if submitted and src is not None:
         path = sources.loc[sources["name"] == src, "path"].values[0]
-
+        if os.path.exists(path):
+            pass
+        else:
+            path = path.replace("\\", "/")
+            
         try:
             config = st.session_state.var_config
             id_var = [k for k, v in config.items() if v == 'id']

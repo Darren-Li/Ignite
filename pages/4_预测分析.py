@@ -72,13 +72,13 @@ if step == 'Step 0 – Data & Variables':
     # ========= 只在提交时读数据 =========
     if submitted:
         path = sources.loc[sources["name"] == src, "path"].values[0]
+        if os.path.exists(path):
+            pass
+        else:
+            path = path.replace("\\", "/")
 
         try:
-            if os.path.exists(path):
-                df = pd.read_csv(path)
-            else:
-                path = path.replace("\\", "/")
-                df = pd.read_csv(path)
+            df = pd.read_csv(path)
         except Exception as e:
             st.error(f"Failed to load data: {e}")
             st.stop()
@@ -621,7 +621,11 @@ if step == 'Step 5 – Scoring' and 'model' in st.session_state:
 
     if submitted and src is not None:
         path = sources.loc[sources["name"] == src, "path"].values[0]
-
+        if os.path.exists(path):
+            pass
+        else:
+            path = path.replace("\\", "/")
+            
         config = st.session_state.var_config
         id_var = [k for k, v in config.items() if v == 'id']
         features = st.session_state.features

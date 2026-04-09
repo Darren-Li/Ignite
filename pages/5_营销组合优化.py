@@ -144,13 +144,13 @@ if step == 'Step 0 – Data & Variables':
     # ========= 只在提交时读数据 =========
     if submitted:
         path = sources.loc[sources["name"] == src, "path"].values[0]
+        if os.path.exists(path):
+            pass
+        else:
+            path = path.replace("\\", "/")
 
         try:
-            if os.path.exists(path):
-                df = pd.read_csv(path)
-            else:
-                path = path.replace("\\", "/")
-                df = pd.read_csv(path)
+            df = pd.read_csv(path)
         except Exception as e:
             st.error(f"Failed to load data: {e}")
             st.stop()

@@ -181,7 +181,13 @@ else:
         # ===== 读取数据 =====
         try:
             if row["source_type"] == "file":
-                df_file = pd.read_csv(row["path"])
+                file_path = row["path"]
+                if os.path.exists(file_path):
+                    pass
+                else:
+                    file_path = file_path.replace("\\", "/")
+
+                df_file = pd.read_csv(file_path)
             else:
                 df_file = load_db(row["source_type"], row["path"], row["name"])
         except Exception as e:

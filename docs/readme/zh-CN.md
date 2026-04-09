@@ -62,5 +62,7 @@ streamlit run ignite.py
 	![demo](/docs/img/3.6clustering_analysis.png)
 - 📈 预测分析（回归/分类）
 	![demo](/docs/img/4.1predictive_analysis_calssification.png)
+	![demo](/docs/img/4.2predictive_analysis_calssification.png)
 - 💹 营销组合优化
 	![demo](/docs/img/5.1MMO.png)
+	![demo](/docs/img/5.2MMO.png)

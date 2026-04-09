@@ -66,5 +66,7 @@ streamlit run ignite.py
 	![demo](/docs/img/3.6clustering_analysis.png)
 - 📈 Predictive Analysis (Regression / Classification)
 	![demo](/docs/img/4.1predictive_analysis_calssification.png)
+	![demo](/docs/img/4.2predictive_analysis_calssification.png)
 - 💹 Marketing Mix Optimization
 	![demo](/docs/img/5.1MMO.png)
+	![demo](/docs/img/5.2MMO.png)

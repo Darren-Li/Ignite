@@ -25,5 +25,5 @@ WEB_CNT_IID_ACCESSED: continuous
 WEB_MNTHS_SINCE_LAST_SES: continuous
 dv_balance: exclude
 dv_response: target
-id: continuous
+id: id
 pos_mo_btwn_fst_lst_order: continuous

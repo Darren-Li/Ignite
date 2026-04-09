@@ -188,7 +188,7 @@ else:
 
         # ===== 第二行：查看数据样本 =====
         with st.expander("👁️ View the sample(5)"):
-            st.dataframe(df_file.head(), use_container_width=True)
+            st.dataframe(df_file.head(), width='stretch')
 
         # ===== 第三行：汇总分析 =====
         with st.expander("📊 Data profiling"):

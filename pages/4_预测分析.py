@@ -152,7 +152,7 @@ if step == 'Step 0 – Data & Variables':
 
         with cols[6]:
             config[c] = st.selectbox(
-                '',
+                'select the processing method for the feature or the type of feature',
                 options,
                 index=default_index,
                 key=f'var_{c}_{idx}',
@@ -304,7 +304,7 @@ if step == 'Step 1 – Preprocessing' and st.session_state.df is not None:
         st.session_state.processed_df = df
 
         st.write('The preprocessed dataset')
-        st.dataframe(df.head(), use_container_width=True)
+        st.dataframe(df.head(), width='stretch')
 
 # =========================
 # Step 2: Variable Selection
@@ -334,7 +334,7 @@ if step == 'Step 2 – Variable Selection' and st.session_state.processed_df is 
     st.session_state.processed_df = df
 
     st.write('The final dataset used for modeling')
-    st.dataframe(df.head(), use_container_width=True)
+    st.dataframe(df.head(), width='stretch')
 
 # =========================
 # Step 3: Model selection and tuning
@@ -484,7 +484,7 @@ if step == 'Step 4 – Evaluation' and 'model' in st.session_state:
             st.line_chart(lift_df.set_index('decile')[['pred_positive_rate', 'positive_rate']])
             
         st.markdown("**Lift Table**")
-        st.dataframe(lift_df, hide_index=True, use_container_width=True)
+        st.dataframe(lift_df, hide_index=True, width='stretch')
         
     def evaluate_regression(model, X_test, y_test, n_bins=10):
         st.subheader("Regression Evaluation")
@@ -520,7 +520,7 @@ if step == 'Step 4 – Evaluation' and 'model' in st.session_state:
             st.line_chart(lift_df.set_index('decile')[['pred_rev_mean', 'rev_mean']])
 
         st.markdown("**Cumulative Lift Table**")
-        st.dataframe(lift_df, hide_index=True, use_container_width=True)
+        st.dataframe(lift_df, hide_index=True, width='stretch')
 
     def build_lift_table(y_true, y_score, n_bins=10):
         df = pd.DataFrame({
@@ -656,7 +656,7 @@ if step == 'Step 5 – Scoring' and 'model' in st.session_state:
         else:
             new_df['prediction'] = model.predict(Xnew)
 
-        st.dataframe(new_df.head(), use_container_width=True)
+        st.dataframe(new_df.head(), width='stretch')
 
         st.download_button(
             "💾 Download prediction result",

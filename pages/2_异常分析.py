@@ -436,7 +436,7 @@ def show_result(full_data, title, target, confidence_coef, radio_key):
             full_data, title, target, confidence_coef
         )
 
-    st.plotly_chart(st.session_state[fig_key], use_container_width=True)
+    st.plotly_chart(st.session_state[fig_key], width='stretch')
 
     # ===== 2. radio 只影响 dataframe =====
     option = st.radio(
@@ -454,7 +454,7 @@ def show_result(full_data, title, target, confidence_coef, radio_key):
         show_df = full_data[~full_data['is_anomaly']]
 
     st.write(f"当前显示 {show_df.shape[0]} 条记录")
-    st.dataframe(show_df, use_container_width=True)
+    st.dataframe(show_df, width='stretch')
 
 
 st.set_page_config(layout="wide")
@@ -559,7 +559,7 @@ for idx, c in enumerate(df.columns, 1):
 
     with cols[6]:
         config[c] = st.selectbox(
-            '',
+            'select the processing method for the feature or the type of feature',
             options,
             index=default_index,
             key=f'var_{c}_{idx}',
@@ -577,6 +577,11 @@ df = df.drop(columns=drop_vars)
 
 st.markdown("")  # 空一行
 
+
+# ----------------- 训练按钮 -----------------
+# run_training = st.button("🚀 Run the analysis task")
+
+# if run_training:
 st.subheader('📉3. Abnormal Analysis')
 tab1, tab2 = st.tabs(["🧮 统计方法", "🧬 机器学习"])
 with tab1:
@@ -589,7 +594,7 @@ with tab1:
     if st.button("运行分析", key="stat"):
         plot_data = filtered_data.sort_values(by="date")
         fig = plot_with_plotly(plot_data, target, method, f"{title}    |    Target: {target}     |    Method: {method}")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         st.write("异常检测结果（含辅助指标）：")
         st.dataframe(plot_data[(plot_data[f'{target}_mz_anomaly'] ==True) | (plot_data[f'{target}_box_anomaly'] ==True)])
 with tab2:

@@ -152,7 +152,7 @@ if step == 'Step 0 – Data & Variables':
 
         with cols[6]:
             config[c] = st.selectbox(
-                '',
+                'select the processing method for the feature or the type of feature',
                 options,
                 index=default_index,
                 key=f'var_{c}_{idx}',
@@ -300,7 +300,7 @@ if step == 'Step 1 – Preprocessing' and st.session_state.df is not None:
         st.session_state.processed_df = df
 
         st.write('The preprocessed dataset')
-        st.dataframe(df.head(), use_container_width=True)
+        st.dataframe(df.head(), width='stretch')
 
 # =========================
 # Step 2: Variable Selection
@@ -329,7 +329,7 @@ if step == 'Step 2 – Variable Selection' and st.session_state.processed_df is 
     st.session_state.processed_df = df
 
     st.write('The final dataset used for modeling')
-    st.dataframe(df.head(), use_container_width=True)
+    st.dataframe(df.head(), width='stretch')
 
 # =========================
 # Step 3: Clustering
@@ -417,7 +417,7 @@ if step == 'Step 4 – Evaluation' and 'clustered_df' in st.session_state:
     # ---------------- 聚类均值分析 ----------------
     cluster_means = df.groupby('cluster')[selected_vars].mean().reset_index()
     st.markdown("Cluster Means Table")
-    st.dataframe(cluster_means, use_container_width=True)
+    st.dataframe(cluster_means, width='stretch')
     
     # ---------------- 平行坐标系图 ----------------
     st.markdown("Parallel Coordinates Plot")
@@ -443,7 +443,7 @@ if step == 'Step 4 – Evaluation' and 'clustered_df' in st.session_state:
         ), 
         margin=dict(l=80, r=50, t=50, b=50)
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 # =========================
 # Step 5: Scoring
@@ -475,7 +475,7 @@ if step == 'Step 5 – Scoring' and 'kmeans' in st.session_state:
             selected = st.session_state.selected_vars
             new_df = pd.read_csv(path, usecols=id_var + selected)
             st.write('Sample of new dataset')
-            st.dataframe(new_df.head(), use_container_width=True)
+            st.dataframe(new_df.head(), width='stretch')
         except Exception as e:
             st.error(f"Failed to load data: {e}")
             st.stop()
@@ -538,7 +538,7 @@ if step == 'Step 5 – Scoring' and 'kmeans' in st.session_state:
     st.success(f"Scoring completed: {result_df.shape[0]} rows classified into clusters.")
 
     st.write("Sample of scoring result:")
-    st.dataframe(result_df.head(), use_container_width=True)
+    st.dataframe(result_df.head(), width='stretch')
     st.download_button(
                     "💾 下载聚类结果完整明细数据",
                     data=result_df.to_csv().encode('utf-8'),

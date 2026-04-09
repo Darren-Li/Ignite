@@ -17,3 +17,5 @@ streamlit==1.51.0
 xarray==2025.10.1
 xgboost==3.2.0
 ydata_profiling==4.18.1
+h5netcdf
+netcdf4

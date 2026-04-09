@@ -73,7 +73,11 @@ if step == 'Step 0 – Data & Variables':
         path = sources.loc[sources["name"] == src, "path"].values[0]
 
         try:
-            df = pd.read_csv(path)
+            if os.path.exists(path):
+                df = pd.read_csv(path)
+            else:
+                path = path.replace("\\", "/")
+                df = pd.read_csv(path)
         except Exception as e:
             st.error(f"Failed to load data: {e}")
             st.stop()

@@ -603,7 +603,7 @@ if step == 'Step 3 – Modeling' and st.session_state.df is not None:
                 time_varying_intercept=model_config_parameters[2]
             )
 
-            message_placeholder.warning("🚀 模型正在训练中 (MCMC Sampling)... 请勿关闭页面")
+            message_placeholder.warning("🏃 模型正在训练中 (MCMC Sampling)... 请勿关闭页面")
             mmm.build_model(X_train, y_train)
 
             # Add the contribution variables to the model

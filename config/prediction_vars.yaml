@@ -1,0 +1,10 @@
+activity_score: continuous
+age: continuous
+discount_usage: binary
+event: target
+id: id
+income: continuous
+segment: nominal
+tenure: continuous
+time: exclude
+usage_freq: continuous

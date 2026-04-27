@@ -1,9 +1,91 @@
 import streamlit as st
 
-st.set_page_config(layout='wide')
-st.title("Ignite数据分析平台")
+# =========================
+# 页面配置
+# =========================
+st.set_page_config(
+    page_title="Ignite 数据分析平台",
+    layout="wide"
+)
 
-# 分组
+# =========================
+# Sidebar
+# =========================
+st.sidebar.title("Ignite")
+
+menu = [
+    "首页",
+    "数据准备与治理",
+    "诊断与归因分析",
+    "预测分析",
+    "优化与策略分析",
+    "模拟与决策支持",
+    "因果与实验",
+    "个性化推荐",
+]
+
+selected_menu = st.sidebar.radio("导航", menu)
+
+# =========================
+# 推荐路径
+# =========================
+def show_recommend_paths():
+    st.markdown("## 👍 推荐分析路径")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.info("""
+📉 **销售下滑分析**
+- 异常分析 → 指标归因 → 营销组合优化
+
+📈 **用户增长**
+- 客群洞察 → Uplift → 推荐系统
+""")
+
+    with col2:
+        st.info("""
+🎯 **提升转化**
+- 预测模型 → 下一步最佳行动
+
+🔁 **提升留存**
+- 生存分析 → 流失预测 → 精准触达
+""")
+
+# =========================
+# 卡片组件（稳定版）
+# =========================
+def render_card(features, cols_per_row=3):
+    with st.container():
+        for i in range(0, len(features), cols_per_row):
+            cols = st.columns(cols_per_row)
+            for col, feature in zip(cols, features[i:i+cols_per_row]):
+              with col:
+                st.markdown(f"""
+                  <div style="
+                    border:1px solid #ddd; 
+                    border-radius:10px; 
+                    padding:15px; 
+                    display:flex; 
+                    align-items:flex-start; 
+                    height:180px; 
+                    background-color:#f9f9f9;
+                    overflow:hidden;
+                    ">
+                    <div style="font-size:40px; margin-right:15px;">{feature['icon']}</div>
+                    <div style="flex:1; display:flex; flex-direction:column; justify-content:space-between;">
+                        <h4 style="margin:0;">
+                            <a href="{feature['url']}" style="text-decoration:none; color:#000;">
+                                {feature['title']}
+                            </a>
+                        </h4>
+                        <p style="margin:0; font-size:16px; color:#555; overflow-y:auto;">{feature['description']}</p>
+                    </div>
+                  </div>""", unsafe_allow_html=True)
+            st.markdown("")
+
+# =========================
+# 模块定义（产品级）
+# =========================
 feature_groups = {
   "数据准备与治理": [
     {
@@ -26,24 +108,24 @@ feature_groups = {
     }
   ],
 
-  "诊断与洞察分析": [
+  "诊断与归因分析": [
     {
       "title": "异常分析",
       "icon": "⚠️",
       "url": "/异常分析",
-      "description": "业务指标异常识别与定位（Z-Score / IQR / 时间序列异常）"
-    },
-    {
-      "title": "指标波动归因(coming soon)",
-      "icon": "🧭",
-      "url": "/指标归因",
-      "description": "拆解指标变化原因，定位关键影响因素"
+      "description": "业务指标异常识别与定位（Z-Score /修正Z-Score/ IQR / 时间序列预测算法）"
     },
     {
       "title": "客群洞察",
       "icon": "👥",
       "url": "/聚类分析",
       "description": "客户分群与画像分析（K-means / PCA）"
+    },
+    {
+      "title": "指标波动归因(coming soon)",
+      "icon": "🧭",
+      "url": "/指标归因",
+      "description": "拆解指标变化原因，定位关键影响因素"
     }
   ],
 
@@ -58,14 +140,14 @@ feature_groups = {
       "title": "预测分析（回归/分类）",
       "icon": "📊",
       "url": "/预测分析",
-      "description": "销售额、需求量等连续目标预测（Linear / Random Forest）；转化、流失、响应概率预测（Logistic / XGBoost）"
+      "description": "销售额、需求量等连续目标预测（Linear / Random Forest）；转化、流失、响应倾向性分类目标预测（Logistic / XGBoost）"
     },
-    # {
-    #   "title": "行为预测（分类）",
-    #   "icon": "🔍",
-    #   "url": "/预测分类",
-    #   "description": "转化、流失、响应概率预测（Logistic / XGBoost）"
-    # },
+    {
+      "title": "生存分析",
+      "icon": "⏳",
+      "url": "/生存分析",
+      "description": "“用户多久后会复购/流失”、“何时发券效果最好” 等，不仅能预测“是否发生”，还能预测“何时发生”"
+    },
     {
       "title": "库存与补货预测(coming soon)",
       "icon": "📦",
@@ -108,47 +190,57 @@ feature_groups = {
       "url": "/策略回测",
       "description": "基于历史数据回测不同策略的真实效果"
     }
-  ]
+  ],
+
+  "因果与实验": [
+    {
+      "title": "A/B测试(coming soon)",
+      "icon": "🧪",
+      "url": "/AB测试",
+      "description": "A/B测试"
+    },
+    {
+      "title": "因果推断(coming soon)",
+      "icon": "🔗",
+      "url": "/因果推断",
+      "description": "因果推断"
+    },
+  ],
+
+  "个性化推荐": [
+    {
+      "title": "个性化推荐(coming soon)",
+      "icon": "🎯",
+      "url": "/个性化推荐",
+      "description": "商品/内容推荐"
+    },
+  ],
 }
 
-cols_per_row = 3  # 每行卡片数量，可调整
-# 渲染分组
-for group_name, features in feature_groups.items():
-    st.markdown(f"### {group_name}")
-    with st.container():
-        for i in range(0, len(features), cols_per_row):
-            cols = st.columns(cols_per_row)
-            for col, feature in zip(cols, features[i:i+cols_per_row]):
-                with col:
-                    st.markdown(f"""
-                                <div style="
-                                    border:1px solid #ddd; 
-                                    border-radius:10px; 
-                                    padding:15px; 
-                                    display:flex; 
-                                    align-items:flex-start; 
-                                    height:160px; 
-                                    background-color:#f9f9f9;
-                                    overflow:hidden;
-                                    ">
-                                    <div style="font-size:40px; margin-right:15px;">{feature['icon']}</div>
-                                    <div style="flex:1; display:flex; flex-direction:column; justify-content:space-between;">
-                                        <h4 style="margin:0;">
-                                            <a href="{feature['url']}" style="text-decoration:none; color:#000;">
-                                                {feature['title']}
-                                            </a>
-                                        </h4>
-                                        <p style="margin:0; font-size:16px; color:#555; overflow-y:auto;">{feature['description']}</p>
-                                    </div>
-                                </div>
-                                """, unsafe_allow_html=True)
-            st.markdown("")
+# =========================
+# 主页面
+# =========================
+st.title("Ignite 数据分析平台")
 
+if selected_menu == "首页":
+    show_recommend_paths()
+    st.markdown("## 🧩 功能模块")
+    for group_name, features in feature_groups.items():
+        st.markdown(f"### {group_name}")
+        render_card(features, cols_per_row=3)
+else:
+    st.markdown(f"### {selected_menu}")
+    features = feature_groups.get(selected_menu, [])
+    render_card(features, cols_per_row=3)
+
+# =========================
+# Footer
+# =========================
 st.markdown(
-    """
-    <div style="text-align: center; margin-top: 50px; color: gray; font-size: 16px;">
-        Copyright©2026 南京秉智数据科技有限公司
-    </div>
-    """,
-    unsafe_allow_html=True
+  """
+  <div style="text-align: center; margin-top: 50px; color: gray; font-size: 16px;">
+      Copyright©2026 南京秉智数据科技有限公司
+  </div>
+  """,
+  unsafe_allow_html=True
 )

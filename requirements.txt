@@ -19,3 +19,6 @@ xgboost==3.2.0
 ydata_profiling==4.18.1
 h5netcdf
 netcdf4
+scikit-survival==0.26.0
+joblib==1.5.2
+econml==0.16.0

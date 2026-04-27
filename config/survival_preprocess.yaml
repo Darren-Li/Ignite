@@ -1,0 +1,20 @@
+cat_cols:
+- segment
+event_var: event
+features:
+- age
+- income
+- tenure
+- activity_score
+- usage_freq
+- discount_usage
+- segment
+id_var: id
+num_cols:
+- age
+- income
+- tenure
+- activity_score
+- usage_freq
+- discount_usage
+time_var: time

@@ -67,7 +67,7 @@ if step == 'Step 0 – Data & Variables':
             index=None,
             placeholder="Select a dataset..."
         )
-        submitted = st.form_submit_button("▶️ Load Data and Analyse")
+        submitted = st.form_submit_button("▶️ Data Preparation & Analysis")
 
     # ========= 只在提交时读数据 =========
     if submitted:
@@ -171,7 +171,7 @@ if step == 'Step 0 – Data & Variables':
     if st.button('💾 Save Variable Configuration'):
         st.session_state.var_config = config
         Path('config').mkdir(exist_ok=True)
-        save_yaml(config, 'config/prediction_variables.yaml')
+        save_yaml(config, 'config/prediction_vars.yaml')
         st.success('Variable configuration saved')
 
 # =========================
@@ -631,7 +631,7 @@ if step == 'Step 5 – Scoring' and 'model' in st.session_state:
         features = st.session_state.features
 
         new_df = pd.read_csv(path, usecols=id_var + features)
-        st.dataframe(new_df.head())
+        # st.dataframe(new_df.head())
 
         with open('config/prediction_preprocess_pipeline.yaml', 'r', encoding='utf-8') as f:
             pipeline = yaml.safe_load(f)
@@ -665,10 +665,11 @@ if step == 'Step 5 – Scoring' and 'model' in st.session_state:
         else:
             new_df['prediction'] = model.predict(Xnew)
 
+        st.write('Scorint Result:')
         st.dataframe(new_df.head(), width='stretch')
 
         st.download_button(
-            "💾 Download prediction result",
+            "💾 Download all prediction result",
             data=new_df.to_csv(index=False).encode('utf-8'),
             file_name="prediction_result.csv",
             mime="text/csv"

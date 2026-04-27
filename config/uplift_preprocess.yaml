@@ -1,0 +1,24 @@
+cat_cols:
+- gender
+- region
+features:
+- age
+- gender
+- region
+- income
+- visits_30d
+- last_active_days
+- purchase_count
+- avg_order_value
+- campaign_score
+id_var: user_id
+num_cols:
+- age
+- income
+- visits_30d
+- last_active_days
+- purchase_count
+- avg_order_value
+- campaign_score
+target_var: conversion
+treatment_var: treatment

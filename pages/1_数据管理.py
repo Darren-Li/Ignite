@@ -54,6 +54,7 @@ with tab1:
         upload_id = secrets.token_urlsafe(6)  # 生成 8 字符的短 ID（约 48 位熵，冲突概率极低） 注意：参数是字节数，不是字符数！
         safe_filename = f"{Path(uploaded.name).stem}_{upload_id}.csv"  # 将数据保存为csv格式
         save_path = Path("data/raw") / safe_filename
+        save_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(save_path, index=False)
         conn = get_conn()
         conn.execute(

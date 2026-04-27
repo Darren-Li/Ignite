@@ -1,0 +1,1332 @@
+# import warnings
+import streamlit as st
+import os
+import pandas as pd
+import numpy as np
+import math
+import plotly.graph_objects as go
+import plotly.express as px
+from pathlib import Path
+import yaml
+import uuid
+from datetime import datetime, timedelta
+
+from sklearn.preprocessing import MinMaxScaler, MaxAbsScaler, StandardScaler
+
+import arviz as az
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
+import pymc as pm
+import seaborn as sns
+
+from pymc_extras.prior import Prior
+
+from pymc_marketing.metrics import crps
+from pymc_marketing.mmm import GeometricAdstock, LogisticSaturation
+from pymc_marketing.mmm.multidimensional import (
+    MMM,
+    MultiDimensionalBudgetOptimizerWrapper,
+)
+
+seed: int = sum(map(ord, "mmm"))
+rng: np.random.Generator = np.random.default_rng(seed=seed)
+# warnings.filterwarnings("ignore", category=FutureWarning)
+
+from services.db_service import get_conn
+
+
+# =========================
+# Utilities
+# =========================
+def save_yaml(obj, path):
+    with open(path, 'w', encoding='utf-8') as f:
+        yaml.dump(obj, f, allow_unicode=True)
+
+def get_k_by_v(dict, value, default=None):
+    """返回字典中第一个匹配值的键，未找到返回 default"""
+    return next((k for k, v in dict.items() if v == value), default)
+
+def plot_ts_with_target(df, ts, time_freq, target, col):
+    # 绘制双坐标轴时序图
+    fig = go.Figure()
+
+    # 特征列（左轴）
+    if col != target:
+        fig.add_trace(go.Scatter(
+            x=df[ts],
+            y=df[col],
+            mode='lines+markers',
+            name=col,
+            yaxis="y1"
+        ))
+
+        # 目标列（右轴）
+        fig.add_trace(go.Scatter(
+            x=df[ts],
+            y=df[target],
+            mode='lines+markers',
+            name=target,
+            yaxis="y2",
+            line=dict(dash='dash', color='red')
+        ))
+    else:
+        # 如果当前是目标列，只画自己
+        fig.add_trace(go.Scatter(
+            x=df[ts],
+            y=df[col],
+            mode='lines+markers',
+            name=col,
+            yaxis="y1"
+        ))
+
+    # 设置双坐标轴布局
+    title = f"{col} 与 {target} 随时间变化" if col != target else f"{target} 随时间变化"
+    fig.update_layout(
+        title=title,
+        xaxis=dict(title="time",
+            tickformat="%Y" if time_freq == "年" else
+                   "%Y-Q%q" if time_freq == "季度" else
+                   "%b-%Y" if time_freq == "月" else
+                   "%Y-%m-%d"),
+        yaxis=dict(title=col, side='left', showgrid=True),
+        yaxis2=dict(title=target, overlaying='y', side='right', showgrid=False),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        margin=dict(t=50)
+    )
+
+    return fig
+
+
+# =========================
+# Streamlit App
+# =========================
+
+st.set_page_config(layout='wide')
+st.title('Marketing Mix Optimization')
+
+# Sidebar navigation
+step = st.sidebar.radio(
+    'Workflow',
+    ['Step 0 – Data & Variables', 'Step 1 – Exploratory Data Analysis', 'Step 2 – Model Specification',
+     'Step 3 – Modeling', 'Step 4 – Media Deep Dive', 'Step 5 – Budget Optimization']
+)
+
+# Shared state
+if 'df' not in st.session_state:
+    st.session_state.df = None
+if 'var_config' not in st.session_state:
+    st.session_state.var_config = {}
+if 'processed_df' not in st.session_state:
+    st.session_state.processed_df = None
+
+# =========================
+# Step 0: Data & Variable Setup
+# =========================
+
+if step == 'Step 0 – Data & Variables':
+    st.header('Step 0: Data Import & Variable Classification')
+
+    # ========= Load Data =========
+    st.subheader('1. Load Data')
+
+    conn = get_conn()
+    sources = pd.read_sql("SELECT * FROM data_sources", conn)
+
+    # ========= 显式选择 + 提交 =========
+    with st.form("data_select_form"):
+        src = st.selectbox(
+            "Select a dataset for modeling",
+            sources["name"],
+            index=None,
+            placeholder="Select a dataset..."
+        )
+        submitted = st.form_submit_button("▶️ Load Data and Analyse")
+
+    # ========= 只在提交时读数据 =========
+    if submitted:
+        path = sources.loc[sources["name"] == src, "path"].values[0]
+        if os.path.exists(path):
+            pass
+        else:
+            path = path.replace("\\", "/")
+
+        try:
+            df = pd.read_csv(path)
+        except Exception as e:
+            st.error(f"Failed to load data: {e}")
+            st.stop()
+
+        st.session_state.df = df
+        st.session_state.selected_source = src
+
+    # ========= 关键防线（不是可选） =========
+    if (
+        'df' not in st.session_state
+        or st.session_state.df is None
+        or not isinstance(st.session_state.df, pd.DataFrame)
+    ):
+        st.info("Please select a dataset and click **Load Data** to continue.")
+        st.stop()
+
+    # ========= 从这里开始，df 100% 安全 =========
+    df = st.session_state.df
+    st.success(f"Data loaded: {df.shape[0]} rows, {df.shape[1]} columns")
+
+    # ========= Profiling & Classification =========
+    st.subheader('2. Variable Profiling & Classification')
+
+    sample_n = 3
+    col_widths = [1/2, 2, 1, 1*sample_n, 1, 1, 2, 2]
+    header_cols = st.columns(col_widths)
+    header_texts = ["#", "Field Name", "Type", f"Sample ({sample_n})", "Missing %", "Unique", "Classification", "Operation Type"]
+
+    for col, text in zip(header_cols, header_texts):
+        col.markdown(f"**{text}**")
+
+    st.markdown('<hr style="margin:1px 0">', unsafe_allow_html=True)  # 表头分隔线
+
+    prev_config = st.session_state.get('var_config', {})
+    options = ['exclude', 'datetime', 'target', 'control', 'media']
+    prev_ops_config = st.session_state.get('ops_config', {})
+    ops_options = ['sum', 'mean', 'NA']
+
+    config = {}
+    ops_config = {}
+    for idx, c in enumerate(df.columns, 1):
+        c_type = df[c].dtype
+        c_unique = df[c].nunique()
+        cols = st.columns(col_widths)
+        # ====== 填充列内容 ======
+        with cols[0]:
+            st.write(idx)
+        with cols[1]:
+            st.write(c)
+        with cols[2]:
+            st.write(str(c_type))
+        with cols[3]:
+            samples = [str(x) for x in df[c].dropna().unique()[:sample_n]]
+            st.markdown(", ".join(samples), unsafe_allow_html=True)
+        with cols[4]:
+            missing_pct = df[c].isna().mean() * 100
+            st.write(f"{missing_pct:.1f}%")
+        with cols[5]:
+            st.write(c_unique)
+
+        # ===== 自动填充下拉框 =====
+        # 先尝试从已有配置取值
+        default_value = prev_config.get(c, None)
+
+        # 如果没有，就根据简单规则判断
+        if default_value is None:
+            if 'datetime' in c.lower() or 'date' in c.lower() or c_type =="datetime64[ns]":
+                default_value = 'datetime'
+            elif 'target' in c.lower() or '_consumption' in c.lower():
+                default_value = 'target'
+            elif c.lower().startswith("ctrl_"):
+                default_value = 'control'
+            else:
+                default_value = 'media'
+        # 计算默认索引
+        default_index = options.index(default_value) if default_value in options else 0
+
+        with cols[6]:
+            config[c] = st.selectbox(
+                'select the processing method for the feature or the type of feature',
+                options,
+                index=default_index,
+                key=f'var_{c}_{idx}',
+                label_visibility="collapsed"
+            )
+
+        # 先尝试从已有配置取值
+        default_ops_value = prev_ops_config.get(c, None)
+        # 如果没有，就根据简单规则判断
+        if default_ops_value is None:
+            if 'datetime' in c.lower() or 'date' in c.lower() or c_type =="datetime64[ns]":
+                default_ops_value = 'NA'
+            elif 'target' in c.lower():
+                default_ops_value = 'sum'
+            elif c.lower().startswith("ctrl_"):
+                default_ops_value = 'mean'
+            else:
+                default_ops_value = 'sum'
+        # 计算默认索引
+        default_ops_index = ops_options.index(default_ops_value) if default_ops_value in ops_options else 0
+        
+        with cols[7]:
+            ops_config[c] = st.selectbox(
+                'select the function for aggregating the feature',
+                ops_options,
+                index=default_ops_index,
+                key=f'ops_{c}_{idx}',
+                label_visibility="collapsed"
+            )
+        # 分隔线
+        st.markdown('<hr style="margin:1px 0">', unsafe_allow_html=True)
+
+    # 保存按钮
+    if st.button('💾 Save Variable Configuration'):
+        st.session_state.var_config = config
+        st.session_state.ops_config = ops_config
+
+        # Path('config').mkdir(exist_ok=True)
+        # save_yaml(config, 'config/mmm_config.yaml')
+        # save_yaml(ops_config, 'config/mmm_ops_config.yaml')
+        # st.success('Variable configuration saved')
+
+# =========================
+# Step 1: Exploratory Data Analysis
+# =========================
+
+if step == 'Step 1 – Exploratory Data Analysis' and st.session_state.df is not None:
+    st.header('Step 1: Exploratory Data Analysis')
+    config = st.session_state.var_config
+    ops_config = st.session_state.ops_config
+    df = st.session_state.df
+
+    # 指定列
+    time_col, target_col = get_k_by_v(config, "datetime"), get_k_by_v(config, "target")
+    media_vars = [k for k, v in config.items() if v == 'media']
+    ctrl_vars = [k for k, v in config.items() if v == 'control']
+    feature_cols = media_vars + ctrl_vars
+    
+    df[time_col] = pd.to_datetime(df[time_col])
+
+    # ---------------------------
+    # 数据基本信息
+    # ---------------------------
+    num_rows, num_cols = df.shape
+    start_date = df[time_col].min()
+    end_date = df[time_col].max()
+
+    st.markdown(f"""
+    **数据总览：**
+    行数: `{num_rows}`, 列数: `{num_cols}`;      时间范围: `{start_date}` ~ `{end_date}`;      目标变量: `{target_col}`
+    """)
+
+    # ---------------------------
+    # 时间粒度选择器
+    # ---------------------------
+    time_freq = st.radio("选择时间聚合粒度",
+        [
+        # "天",
+        "月", "季度", "年"],
+        index=0,
+        horizontal=True,  # 水平排列
+        label_visibility="visible")
+    # 重采样映射
+    freq_map = {
+        # "天": "D",
+        "月": "MS",     # 月初
+        "季度": "QS",   # 季初
+        "年": "YS"      # 年初
+    }
+    resample_rule = freq_map[time_freq]
+
+    # 按时间重采样
+    agg_dict= ops_config
+    agg_dict.pop(time_col, None)
+    df_resampled = df.set_index(time_col).resample(resample_rule).agg(agg_dict).reset_index()  # 从ops_config获取每个字段聚合函数
+
+    # ---------------------------
+    # 变量分析表格
+    # ---------------------------
+    col_widths_header = [0.5, 2, 1, 1]
+    header_cols = st.columns(col_widths_header)
+    header_texts = ["#", "Column", "Type", "Operation"]
+    for col, text in zip(header_cols, header_texts):
+        col.markdown(f"**{text}**")
+
+    st.markdown('<hr style="margin:1px 0; border-top: 2px solid #eee">', unsafe_allow_html=True)
+
+    for idx, col in enumerate([target_col] + feature_cols, 1):
+        row1_cols = st.columns(col_widths_header)  # 保持跟表头一样的列数和宽度
+        with row1_cols[0]:
+            st.write(idx)
+        with row1_cols[1]:
+            st.write(col)
+        with row1_cols[2]:
+            st.markdown(f"`{df_resampled[col].dtype}`")
+        with row1_cols[3]:
+            st.write(ops_config.get(col))
+
+        expanded = True if idx==1 else False
+        with st.expander(f"Time Series Chart with `{target_col}`", expanded=expanded):
+            fig = plot_ts_with_target(df_resampled, time_col, time_freq, target_col, col)
+            st.plotly_chart(fig, width="stretch")
+
+        # 每条数据后加分隔线
+        st.markdown('<hr style="margin:1px 0; border-top: 1px solid #ddd">', unsafe_allow_html=True)
+
+# =========================
+# Step 2: Model Specification
+# =========================
+
+if step == 'Step 2 – Model Specification' and st.session_state.df is not None:
+    st.header('Step 2. Model Specification')
+    df = st.session_state.df
+    config = st.session_state.var_config
+
+    media_vars = [k for k, v in config.items() if v == 'media']
+    ctrl_vars = [k for k, v in config.items() if v == 'control']
+
+    st.subheader('1. Model Specification')
+    cols = st.columns(3, gap="large")
+    with cols[0]:
+        l_max = st.number_input('Max duration', 6, key='p_l_max', help="Maximum duration of carryover effect.")
+    with cols[1]:
+        yearly_seasonality = st.slider('Yearly seasonality', 2, 6, 4, key=f'p_seasonality',
+            help="yearly seasonality")
+    with cols[2]:
+        time_varying_intercept = st.checkbox(
+            "Time varying intercept",     # 必传：复选框旁边的文字说明
+            value=False,                  # 可选：默认是否勾选，默认不勾选
+            key='p_intercept_vary',       # 可选：绑定session_state的键，用于保留状态
+            help="Whether to consider time-varying intercept.")
+
+    st.session_state.model_config_parameters = [l_max, yearly_seasonality, time_varying_intercept]
+
+    cols = st.columns(4, gap="large")
+    with cols[0]:
+        target_accept = st.slider('Target accept', 0.7, 1.0, 0.9, key='p_target_accept', help="")
+    with cols[1]:
+        chains = st.number_input('chains', 2, 6, 4, key='p_chains', help="独立的 MCMC 链数量。常用 4~6 条链，太多会消耗计算资源。")
+    with cols[2]:
+        draws = st.number_input('draws', 500, key='p_draws', help="每条链从 后验分布中采样的有效样本数量。")
+    with cols[3]:
+        tune = st.number_input('tune', 1000, key='p_tune', help="热身 / 调整期（tuning / burn-in）的步数。热身步数通常 ≥ draws。")
+
+    st.session_state.model_fit_parameters = [target_accept, chains, draws, tune]
+
+    st.subheader('2. prior_sigma')
+    ttl_spend_per_channel = df.tail(24)[media_vars].replace(0, np.nan).mean(axis=0).replace(np.nan,0).copy()
+    prior_sigma = ttl_spend_per_channel / ttl_spend_per_channel.sum()
+    prior_sigma = prior_sigma.to_numpy()
+    st.dataframe(pd.DataFrame({"channel":media_vars,"value":prior_sigma}))
+
+    st.subheader('3. Parameters of Adstock and Saturation')
+    col_widths = [1/2, 2, 1, 1, 1, 1]
+    header_cols = st.columns(col_widths)
+    header_texts = ["#", "Media Name", "Adstock_alpha_alpha", "Adstock_alpha_beta", "Saturation_lam_alpha", "saturation_lam_beta"]
+
+    for col, text in zip(header_cols, header_texts):
+        col.markdown(f"**{text}**")
+
+    st.markdown('<hr style="margin:1px 0">', unsafe_allow_html=True)  # 表头分隔线
+
+    adstock_alpha_a, adstock_alpha_b, saturation_lam_a, saturation_lam_b = [], [], [], []
+    for idx, c in enumerate(media_vars, 1):
+        cols = st.columns(col_widths)
+        # ====== 填充列内容 ======
+        with cols[0]:
+            st.write(idx)
+        with cols[1]:
+            st.write(c)
+        with cols[2]:
+            alpha1 = st.number_input('set the parameter values', 2, key=f'a1_{c}_{idx}', label_visibility="hidden")
+        with cols[3]:
+            alpha2 = st.number_input('set the parameter values', 3, key=f'a2_{c}_{idx}', label_visibility="hidden")
+        with cols[4]:
+            lam1 = st.number_input('set the parameter values', 2, key=f'l1_{c}_{idx}', label_visibility="hidden")
+        with cols[5]:
+            lam2 = st.number_input('set the parameter values', 3, key=f'l2_{c}_{idx}', label_visibility="hidden")
+
+        adstock_alpha_a.append(alpha1)
+        adstock_alpha_b.append(alpha2)
+        saturation_lam_a.append(lam1)
+        saturation_lam_b.append(lam2)
+
+        # 分隔线
+        st.markdown('<hr style="margin:1px 0">', unsafe_allow_html=True)
+
+    # 保存按钮
+    if st.button('💾 Save Parameters of Adstock and Saturation Configuration'):
+        st.session_state.prior_sigma = prior_sigma
+        st.session_state.adstock_alpha_a = adstock_alpha_a
+        st.session_state.adstock_alpha_b = adstock_alpha_b
+        st.session_state.saturation_lam_a = saturation_lam_a
+        st.session_state.saturation_lam_b = saturation_lam_b
+
+
+# =========================
+# Step 3: Modeling
+# =========================
+
+if step == 'Step 3 – Modeling' and st.session_state.df is not None:
+    st.header('Step 3: Modeling')
+    st.subheader('1. Model training or Selection')
+    
+    MODEL_DIR = "models"    # 确保目录存在
+    os.makedirs(MODEL_DIR, exist_ok=True)
+    # --- 1. 获取现有模型列表 ---
+    # 扫描目录下所有以 .nc 结尾的文件
+    available_models = [f for f in os.listdir(MODEL_DIR) if f.endswith(".nc")]
+    # 如果有模型，允许选择；如果没有，默认为训练
+    if available_models:
+        mode = st.radio(
+            "选择操作模式：",
+            options=["加载现有模型", "训练新模型"],
+            index=0  # 默认选中第一个
+        )
+    else:
+        st.info("未检测到现有模型，请进行训练。")
+        mode = "训练新模型"
+
+    if mode == "加载现有模型":
+        st.write("🧠 加载现有模型")
+        
+        # 下拉菜单选择具体模型文件
+        selected_model_file = st.selectbox(
+            "选择要加载的模型文件：",
+            options=available_models,
+            format_func=lambda x: x  # 显示文件名
+        )
+        
+        model_path = os.path.join(MODEL_DIR, selected_model_file)
+        model_id = selected_model_file[-9:-3]
+        
+        # 显示加载按钮
+        if st.button(f"📤 加载模型：{selected_model_file}"):
+            try:
+                with st.spinner(f"正在从 {model_path} 加载模型..."):
+                    # 核心加载代码
+                    # 注意：这里假设你之前保存的是 mmm 对象
+                    # 如果你的 MMM 类定义在不同模块，请确保环境一致
+                    loaded_mmm = MMM.load(model_path)
+                    
+                st.success("✅ 模型加载成功！")
+                
+                # 将加载的模型存入 session_state，供后续页面使用
+                st.session_state['model'] = loaded_mmm
+                st.session_state['model_source'] = "loaded"
+                
+                # 简单展示模型信息（可选）
+                st.write(f"**模型来源:** {model_path}")
+                # 如果有先验图或数据概览，可以在这里展示
+                # loaded_mmm.plot_components_contributions()
+                
+            except Exception as e:
+                st.error(f"❌ 加载失败：{e}")
+
+    elif mode == "训练新模型":
+        st.write("🔢 训练新模型")
+        model_id = uuid.uuid4().hex[:6]
+
+        df = st.session_state.df
+        config = st.session_state.var_config
+
+        time_col, target_col = get_k_by_v(config, "datetime"), get_k_by_v(config, "target")
+        media_vars = [k for k, v in config.items() if v == 'media']
+        ctrl_vars = [k for k, v in config.items() if v == 'control']
+
+        # 对控制变量进行标准化处理
+        # ctrl_vars_std = []
+        # scalers = dict()
+        # scaled_data = pd.DataFrame()
+        # for col in ctrl_vars:
+        #     scaler = MaxAbsScaler()
+        #     #scaler = StandardScaler()
+        #     scalers[col] = scaler.fit(df[[col]])
+        #     scaled_data[col] = scalers[col].transform(df[[col]]).flatten()
+
+        # for i, col in enumerate(ctrl_vars):
+        #     ctrl_vars_std.append(f'{col}_std')
+        #     df[f'{col}_std'] = scaled_data.iloc[:, i]
+
+        model_config = {
+            'intercept': Prior("Normal", mu=0, sigma=1),
+            'likelihood': Prior("Normal", sigma=Prior("HalfNormal", sigma=1)),
+            'gamma_control': Prior("Normal", mu=0, sigma=.1, dims="control"),
+            'gamma_fourier': Prior("Laplace", mu=0, b=1, dims="fourier_mode"),
+            'adstock_alpha': Prior("Beta", alpha=st.session_state.adstock_alpha_a, beta=st.session_state.adstock_alpha_b, dims="channel"),
+            'saturation_lam': Prior("Gamma", alpha=st.session_state.saturation_lam_a, beta=st.session_state.saturation_lam_b, dims="channel"),
+            'saturation_beta': Prior("HalfNormal", sigma=st.session_state.prior_sigma, dims="channel")
+        }
+
+        train_test_split_date = st.date_input("数据集划分时间点", 
+            df[time_col].max() - pd.DateOffset(months=3),
+            min_value=df[time_col].min(), max_value=df[time_col].max())
+        train_test_split_date = pd.Timestamp(train_test_split_date)
+        
+        # ----------------- 训练按钮 -----------------
+        run_training = st.button("🚀 Train Model")
+
+        if run_training:
+            progress_placeholder = st.empty()
+            message_placeholder = st.empty()
+
+            message_placeholder.info("⏳ 正在准备数据与划分训练集...")
+            df['split_flag'] = np.where(df[time_col] < train_test_split_date, 'train', 'test')
+            train_df = df[df['split_flag'] == 'train']
+            test_df = df[df['split_flag'] == 'test']
+
+            model_dt_path = os.path.join(MODEL_DIR, f"data_MMM_{model_id}.parquet")
+
+            df.to_parquet(model_dt_path)
+
+            st.session_state.train_df = train_df
+            st.session_state.test_df = test_df
+
+            cols = st.columns(2)
+            with cols[0]:
+                st.write("Sales - Train Test Split")
+                fig, ax = plt.subplots(figsize=(8, 4))
+                sns.lineplot(data=train_df, x=time_col, y=target_col, color="C0", label="Train", ax=ax)
+                sns.lineplot(data=test_df, x=time_col, y=target_col, color="C1", label="Test", ax=ax)
+                ax.set(xlabel="date")
+                ax.set_title("Sales - Train Test Split", fontsize=16, fontweight="bold")
+                st.pyplot(fig, dpi=150)
+
+            with cols[1]:
+                st.write("Data split Infomation:")
+                st.write(f"""There are **{train_df.shape[0]}** observations in **Training** set, 
+                    The time range is from **{train_df[time_col].min()}** to **{train_df[time_col].max()}**""")
+                st.write(f"""There are **{test_df.shape[0]}** observations in **Test** set, 
+                    The time range is from **{test_df[time_col].min()}** to **{test_df[time_col].max()}**""")
+
+            X_train = train_df.drop(columns=target_col)
+            X_test = test_df.drop(columns=target_col)
+
+            y_train = train_df[target_col]
+            y_test = test_df[target_col]
+
+            st.session_state.X_train = X_train
+            st.session_state.X_test = X_test
+            st.session_state.y_train = y_train
+            st.session_state.y_test = y_test
+
+            message_placeholder.info("🏗️ 正在构建模型结构...")
+            sampler_config = {"progressbar": True}
+            model_config_parameters = st.session_state.model_config_parameters
+
+            mmm = MMM(
+                model_config=model_config,
+                sampler_config=sampler_config,
+                target_column=target_col,
+                date_column=time_col,
+                adstock=GeometricAdstock(l_max=model_config_parameters[0]),
+                saturation=LogisticSaturation(),
+                channel_columns=media_vars,
+                control_columns=ctrl_vars,
+                yearly_seasonality=model_config_parameters[1],
+                time_varying_intercept=model_config_parameters[2]
+            )
+
+            message_placeholder.warning("🏃 模型正在训练中 (MCMC Sampling)... 请勿关闭页面")
+            mmm.build_model(X_train, y_train)
+
+            # Add the contribution variables to the model
+            # to track them in the model and trace.
+            mmm.add_original_scale_contribution_variable(
+                var=[
+                    "channel_contribution",
+                    "control_contribution",
+                    "intercept_contribution",
+                    "yearly_seasonality_contribution",
+                    "y",
+                ]
+            )
+
+            # pm.model_to_graphviz(mmm.model)
+            
+            # ---------------- Fit ----------------
+            model_fit_parameters = st.session_state.model_fit_parameters
+            mmm.fit(
+                X=X_train,
+                y=y_train,
+                target_accept=model_fit_parameters[0],
+                chains=model_fit_parameters[1],
+                draws=model_fit_parameters[2],
+                tune=model_fit_parameters[3],
+                nuts_sampler="nutpie", # nutpie, pymc, numpyro
+                random_seed=rng,
+            )
+
+            mmm.sample_posterior_predictive(X=X_train, random_seed=rng)
+
+            pp = mmm.idata["posterior_predictive"]
+            y_original = pp["y_original_scale"]
+            mmm.idata["posterior_predictive"] = pp.assign(
+                y_original_scale=y_original
+            )
+
+            # ---------------- Save ----------------
+            message_placeholder.info("💾 正在保存模型...")
+            st.session_state['model'] = mmm
+            st.session_state['model_source'] = "trained"
+
+            model_path = os.path.join(MODEL_DIR, f"model_MMM_{model_id}.nc")
+            mmm.save(model_path)
+            st.success(f"Model trained and saved successfully. \n Model Path: {model_path}")
+
+    st.session_state.model_id = model_id
+
+
+# =========================
+# Step 4: Media Deep Dive
+# =========================
+if step == 'Step 4 – Media Deep Dive' and 'model' in st.session_state:
+    st.header('Step 4: Media Deep Dive')
+
+    def plot_channel_contributions(mmm, df, date, target):
+        fig, ax = plt.subplots(figsize=(8, 5))
+
+        sns.lineplot(
+            data=df, x=date, y=target, color="black", label="Sales", ax=ax
+        )
+
+        for i, hdi_prob in enumerate([0.94, 0.5]):
+            az.plot_hdi(
+                x=mmm.model.coords["date"],
+                y=mmm.idata["posterior"]["channel_contribution_original_scale"].sum(
+                    dim="channel"
+                ),
+                color="C0",
+                smooth=False,
+                hdi_prob=hdi_prob,
+                fill_kwargs={
+                    "alpha": 0.3 + i * 0.1,
+                    "label": f"{hdi_prob:.0%} HDI (Channels Contribution)",
+                },
+                ax=ax,
+            )
+
+            az.plot_hdi(
+                x=mmm.model.coords["date"],
+                y=mmm.idata["posterior"]["control_contribution_original_scale"].sum(
+                    dim="control"
+                ),
+                color="C1",
+                smooth=False,
+                hdi_prob=hdi_prob,
+                fill_kwargs={"alpha": 0.3 + i * 0.1, "label": f"{hdi_prob:.0%} HDI Control"},
+                ax=ax,
+            )
+
+            az.plot_hdi(
+                x=mmm.model.coords["date"],
+                y=mmm.idata["posterior"]["yearly_seasonality_contribution_original_scale"],
+                color="C2",
+                smooth=False,
+                hdi_prob=hdi_prob,
+                fill_kwargs={"alpha": 0.3 + i * 0.1, "label": f"{hdi_prob:.0%} HDI Fourier"},
+                ax=ax,
+            )
+
+            az.plot_hdi(
+                x=mmm.model.coords["date"],
+                y=mmm.idata["posterior"]["intercept_contribution_original_scale"]
+                .expand_dims({"date": mmm.model.coords["date"]})
+                .transpose(..., "date"),
+                color="C3",
+                smooth=False,
+                hdi_prob=hdi_prob,
+                fill_kwargs={"alpha": 0.3 + i * 0.1, "label": f"{hdi_prob:.0%} HDI Intercept"},
+                ax=ax,
+            )
+
+        ax.legend(
+            loc="upper center",
+            bbox_to_anchor=(0.5, -0.1),
+            ncol=3,
+        )
+
+        fig.suptitle(
+            "Posterior Predictive - Channel Contributions",
+            fontsize=16,
+            fontweight="bold",
+            y=1.03,
+        )
+
+        return fig, ax
+
+    def plot_channel_contribution_share(channel_contribution_share, channel_columns, spend_shares):
+        fig, ax = plt.subplots(figsize=(8, 6))
+
+        for i, channel in enumerate(channel_columns):
+            # Contribution share mean and hdi
+            share_mean = channel_contribution_share.sel(channel=channel).mean().to_numpy()
+            share_hdi = az.hdi(channel_contribution_share.sel(channel=channel))[
+                "channel_contribution_original_scale"
+            ].to_numpy()
+
+            # ROAS mean and hdi
+            roas_mean = roas.sel(channel=channel).mean().to_numpy()
+            roas_hdi = az.hdi(roas.sel(channel=channel))["roas"].to_numpy().flatten()
+
+            # Plot the contribution share hdi
+            ax.vlines(share_mean, roas_hdi[0], roas_hdi[1], color=f"C{i}", alpha=0.8)
+
+            # Plot the ROAS hdi
+            ax.hlines(roas_mean, share_hdi[0], share_hdi[1], color=f"C{i}", alpha=0.8)
+
+            # Plot the means
+            ax.scatter(
+                share_mean,
+                roas_mean,
+                # Size of the scatter points is proportional to the spend share
+                s=5 * (spend_shares[i] * 100),
+                color=f"C{i}",
+                edgecolor="black",
+                label=channel,
+            )
+        ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1, decimals=0))
+
+        ax.legend(
+            bbox_to_anchor=(1.05, 1), loc="upper left", title="Channel", title_fontsize=14
+        )
+        ax.set(
+            title="Channel Contribution Share vs ROAS",
+            xlabel="Contribution Share",
+            ylabel="ROAS",
+        )
+
+        return fig, ax
+
+    def plot_predictions(mmm, X_test, y_test, date_column):
+        y_pred_test = mmm.sample_posterior_predictive(
+            X_test,
+            include_last_observations=True,
+            var_names=["y_original_scale", "channel_contribution_original_scale"],
+            extend_idata=False,
+            progressbar=False,
+            random_seed=rng
+            )
+
+        fig, ax = plt.subplots(figsize=(8, 4))
+
+        for i, hdi_prob in enumerate([0.94, 0.5]):
+            az.plot_hdi(
+                x=mmm.model.coords["date"],
+                y=(mmm.idata["posterior_predictive"]["y_original_scale"]),
+                color="C0",
+                smooth=False,
+                hdi_prob=hdi_prob,
+                fill_kwargs={"alpha": 0.3 + i * 0.1, "label": f"{hdi_prob:.0%} HDI"},
+                ax=ax,
+            )
+
+            az.plot_hdi(
+                x=X_test[date_column],
+                y=y_pred_test["y_original_scale"].unstack().transpose(..., "date"),
+                color="C1",
+                smooth=False,
+                hdi_prob=hdi_prob,
+                fill_kwargs={"alpha": 0.3 + i * 0.1, "label": f"{hdi_prob:.0%} HDI"},
+                ax=ax,
+            )
+
+
+        ax.plot(X_test[date_column], y_test, color="black")
+
+        ax.plot(
+            mmm.model.coords["date"],
+            mmm.idata["posterior_predictive"]["y_original_scale"].mean(dim=("chain", "draw")),
+            color="C0",
+            linewidth=3,
+            label="Posterior Predictive Mean",
+        )
+
+        ax.plot(
+            X_test[date_column],
+            y_pred_test["y_original_scale"].mean(dim=("sample")),
+            color="C1",
+            linewidth=3,
+            label="Posterior Predictive Mean",
+        )
+
+        ax.axvline(X_test[date_column].iloc[0], color="C2", linestyle="--")
+        ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=3)
+        ax.set(ylabel="sales")
+        ax.set_title("In-Sample and Out-of-Sample Predictions", fontsize=16, fontweight="bold")
+
+        return fig, ax
+
+    config = st.session_state.var_config
+    time_col, target_col = get_k_by_v(config, "datetime"), get_k_by_v(config, "target")
+    media_vars = [k for k, v in config.items() if v == 'media']
+    prior_sigma = st.session_state.prior_sigma
+
+    train_df = st.session_state.train_df
+    X_train = st.session_state.X_train
+    X_test = st.session_state.X_test
+    y_test = st.session_state.y_test
+    mmm = st.session_state['model']
+
+    # MODEL_DIR = "models"    # 确保目录存在
+    # os.makedirs(MODEL_DIR, exist_ok=True)
+    # model_id = st.session_state.model_id
+    # st.write(f"model id: {model_id}")
+    
+    # time_col, target_col, media_vars = mmm.date_column, mmm.target_column, mmm.channel_columns  #, mmm.control_columns
+    # prior_sigma = mmm.model_config["saturation_beta"].parameters["sigma"]
+    # X_train = mmm.X
+
+    # model_dt_path = os.path.join(MODEL_DIR, f"data_MMM_{model_id}.parquet")
+    # df = pd.read_parquet(model_dt_path)  # , engine='pyarrow'
+    # train_df = df[df['split_flag'] == 'train']
+    # test_df = df[df['split_flag'] == 'test']
+    # X_test = test_df.drop(columns=target_col)
+    # y_test = test_df[target_col]
+
+    # mmm.sample_posterior_predictive(X=X_train, random_seed=rng)
+    # mmm.sample_posterior_predictive(X=X_train, 
+    #             var_names=["y_original_scale", "channel_contribution_original_scale"], 
+    #             extend_idata=False,
+    #             progressbar=False,
+    #             random_seed=rng)
+
+    cols = st.columns(2)
+    with cols[0]:
+        st.write("Model Trace")
+        _ = az.plot_trace(
+            data=mmm.fit_result,
+            var_names=[
+                "intercept_contribution",
+                "y_sigma",
+                "saturation_beta",
+                "saturation_lam",
+                "adstock_alpha",
+                "gamma_control",
+                "gamma_fourier",
+            ],
+            compact=True,
+            backend_kwargs={"figsize": (12, 10), "layout": "constrained"},
+        )
+        fig = plt.gcf()
+        fig.suptitle("Model Trace", fontsize=18, fontweight="bold")
+        st.pyplot(fig, dpi=150)
+
+    with cols[1]:
+        st.write("Posterior Predictive Checks")
+        fig, ax = plt.subplots(figsize=(8, 5))
+        for i, hdi_prob in enumerate([0.94, 0.5]):
+            az.plot_hdi(
+                x=mmm.model.coords["date"],
+                y=(mmm.idata["posterior_predictive"].y_original_scale),
+                color="C0",
+                smooth=False,
+                hdi_prob=hdi_prob,
+                fill_kwargs={"alpha": 0.3 + i * 0.1, "label": f"{hdi_prob:.0%} HDI"},
+                ax=ax,
+            )
+
+        sns.lineplot(
+            data=train_df, x=time_col, y=target_col, color="black", label="Sales", ax=ax
+        )
+        ax.legend(loc="upper left")
+        ax.set(xlabel="date", ylabel="sales")
+        ax.set_title("Posterior Predictive Checks", fontsize=16, fontweight="bold")
+        st.pyplot(fig, dpi=150)
+        st.caption("图1：后验预测检查")
+
+    cols = st.columns(2)
+    with cols[0]:
+        st.write("Posterior Predictive - Channel Contributions")
+        fig, ax = plot_channel_contributions(mmm, train_df, time_col, target_col)
+        st.pyplot(fig, dpi=150)
+        st.caption("图2：后验预测的渠道贡献分布")
+
+    with cols[1]:
+        st.write("Waterfall of components decomposition")
+        fig, ax = mmm.plot.waterfall_components_decomposition(figsize=(10, 8))
+        st.pyplot(fig, dpi=150)
+
+    cols = st.columns(2)
+    with cols[0]:
+        st.write("Posterior Channel Contribution Share")
+        channel_contribution_share = (
+            mmm.idata["posterior"]["channel_contribution_original_scale"].sum(dim="date")
+        ) / mmm.idata["posterior"]["channel_contribution_original_scale"].sum(
+            dim=("date", "channel")
+        )
+
+        # Custom plot for demonstration
+        fig, ax = plt.subplots(figsize=(10, 8))
+        az.plot_forest(channel_contribution_share, combined=True, ax=ax)
+        ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1, decimals=0))
+        fig.suptitle("Posterior Channel Contribution Share", fontsize=18, fontweight="bold")
+        st.pyplot(fig, dpi=150)
+
+    with cols[1]:
+        st.write("Return on Ads Spend (ROAS)")
+        roas = mmm.incrementality.contribution_over_spend(frequency="all_time").rename("roas")
+        fig, ax = plt.subplots(figsize=(10, 6))
+        az.plot_forest(roas, combined=True, ax=ax)
+        fig.suptitle("Return on Ads Spend (ROAS)", fontsize=16, fontweight="bold")
+        st.pyplot(fig, dpi=150)
+
+    cols = st.columns(2)
+    with cols[0]:
+        st.write("Channel Contribution Share vs ROAS")
+        fig, ax = plot_channel_contribution_share(channel_contribution_share, media_vars, prior_sigma)
+        st.pyplot(fig, dpi=150)
+    with cols[1]:
+        st.write("In-Sample and Out-of-Sample Predictions")
+        fig, ax = plot_predictions(mmm, X_test, y_test, time_col)
+        st.pyplot(fig, dpi=150)
+
+# =========================
+# Step 5: Budget Optimization
+# =========================
+if step == 'Step 5 – Budget Optimization': # and 'model' in st.session_state:
+    st.header('Step 5: Budget Optimization')
+    st.markdown("基于已训练好的 MMM 模型 · 支持历史回测优化 + 未来预算规划")
+
+    
+    import xarray as xr
+    from pymc_marketing.mmm.multidimensional import (
+        MultiDimensionalBudgetOptimizerWrapper,
+    )
+    
+    st.subheader("加载现有模型")
+
+    MODEL_DIR = "models"
+    os.makedirs(MODEL_DIR, exist_ok=True) # 确保目录存在
+    available_models = [f for f in os.listdir(MODEL_DIR) if f.endswith(".nc")]
+    if available_models:
+        selected_model_file = st.selectbox(
+            "选择要加载的模型文件：",
+            options=available_models,
+            format_func=lambda x: x  # 显示文件名
+        )
+        
+        model_path = os.path.join(MODEL_DIR, selected_model_file)
+    else:
+        st.info("未检测到现有模型，请进行训练。")
+        st.stop()
+
+    if st.button(f"📤 加载模型：\n {model_path}"):
+        try:
+            with st.spinner(f"正在从 {model_path} 加载模型..."):
+                loaded_mmm = MMM.load(model_path)
+            st.success("✅ 模型加载成功！")
+            
+            st.session_state['model'] = loaded_mmm
+            st.session_state['model_source'] = "loaded"
+            
+            st.write(f"**模型来源:** {model_path}")
+        except Exception as e:
+            st.error(f"❌ 加载失败：{e}")
+
+    mmm = st.session_state.model
+    config = st.session_state.var_config
+    time_col, target_col = get_k_by_v(config, "datetime"), get_k_by_v(config, "target")
+    channel_columns = [k for k, v in config.items() if v == 'media']
+    n_channels = len(channel_columns)
+
+    # ====================== 主页面 Tab ======================
+    tab1, tab2 = st.tabs(["📅 历史窗口优化（回测对比）", "🔮 未来窗口优化"])
+
+    # ====================== Tab 1: 历史窗口优化 ======================
+    with tab1:
+        st.subheader("历史数据回测优化")
+        st.markdown("选择历史时间段，用**相同总预算**重新优化分配，对比实际投入与优化后的预期效果。")
+
+        if "X_test" not in st.session_state or "y_test" not in st.session_state:
+            st.warning("请先在主脚本中加载历史 X 和 y 数据，并存入 st.session_state")
+        else:
+            X = st.session_state.X_test
+
+            min_date = X[time_col].min().date()
+            max_date = X[time_col].max().date()
+
+            col1, col2 = st.columns(2)
+            with col1:
+                start_date = st.date_input("开始日期", min_date, min_value=min_date, max_value=max_date)
+            with col2:
+                end_date = st.date_input("结束日期", max_date, min_value=min_date, max_value=max_date)
+
+            mask = (X[time_col].dt.date >= start_date) & (X[time_col].dt.date <= end_date)
+            X_hist = X[mask].reset_index(drop=True)
+            num_periods = len(X_hist)
+
+            actual_total_budget = float(X_hist[channel_columns].sum().sum())
+            st.metric("历史实际总投入", f"¥{actual_total_budget:,.0f}")
+
+            percentage_change = 0.3
+
+            mean_spend_per_period = (
+                X[channel_columns].sum(axis=0).div(num_periods * n_channels)
+            )
+
+            budget_bounds = {
+                key: [(1 - percentage_change) * value, (1 + percentage_change) * value]
+                for key, value in (mean_spend_per_period).to_dict().items()
+            }
+
+            budget_bounds_xr = xr.DataArray(
+                data=list(budget_bounds.values()),
+                dims=["channel", "bound"],
+                coords={
+                    "channel": list(budget_bounds.keys()),
+                    "bound": ["lower", "upper"],
+                },
+            )
+            per_channel_budget = actual_total_budget / (num_periods * n_channels)
+
+            if st.button("🚀 运行预算优化", type="primary", key="hist_opt"):
+                with st.spinner("优化中..."):
+                    try:
+                        # Create the wrapper
+                        optimizable_model = MultiDimensionalBudgetOptimizerWrapper(
+                            model=mmm,
+                            start_date=str(start_date),
+                            end_date=str(end_date),
+                        )
+
+                        allocation_strategy, optimization_result = optimizable_model.optimize_budget(
+                            budget=per_channel_budget,
+                            budget_bounds=budget_bounds_xr,
+                            minimize_kwargs={
+                                "method": "SLSQP",
+                                "options": {"ftol": 1e-4, "maxiter": 10_000},
+                            },
+                        )
+
+                        # Sample response distribution
+                        response = optimizable_model.sample_response_distribution(
+                            allocation_strategy=allocation_strategy,
+                            additional_var_names=[
+                                "channel_contribution",
+                                "y",
+                            ],
+                            include_last_observations=True,
+                            include_carryover=True,
+                            noise_level=0.05,
+                        )
+
+                        st.success("优化完成！")
+
+                        # 可视化对比
+                        col_a, col_b = st.columns(2)
+                        with col_a:
+                            fig, ax = plt.subplots()
+                            contribution_comparison_df = (
+                                pd.Series(allocation_strategy, index=mean_spend_per_period.index)
+                                .to_frame(name="optimized_allocation")
+                                .join(mean_spend_per_period.to_frame(name="initial_allocation"))
+                                .sort_index(ascending=False)
+                            )
+                            contribution_comparison_df.plot.barh(figsize=(12, 8), color=["C1", "C0"], ax=ax)
+                            ax.set(title="Budget Allocation Comparison", xlabel="allocation");
+                            st.pyplot(fig, dpi=150)
+
+                        with col_b:
+                            np.testing.assert_allclose(mean_spend_per_period.sum(), allocation_strategy.sum().item())
+                            fig, ax = optimizable_model.plot.budget_allocation(samples=response, figsize=(12, 8))
+                            st.pyplot(fig, dpi=150)
+
+                        shares_comparison_df = contribution_comparison_df / contribution_comparison_df.sum(
+                            axis=0
+                        )
+
+                        shares_comparison_df = shares_comparison_df.assign(
+                            # We can compute the multiplier as the ratio of the optimized to the initial allocation.
+                            # This will be used to re-weight the original training data.
+                            multiplier=lambda df: df["optimized_allocation"] / df["initial_allocation"]
+                        )
+
+                        X_train = st.session_state.X_train
+                        X_train_weighted = X_train.copy()
+
+                        # We re-weight the original training data with the optimized allocation distribution.
+                        for channel in channel_columns:
+                            channel_multiplier = shares_comparison_df[shares_comparison_df.index == channel][
+                                "multiplier"
+                            ].item()
+                            X_train_weighted[channel] = X_train_weighted[channel] * channel_multiplier
+
+                        # We normalize the total spend in the optimized data to be the same as in the original data.
+                        normalization_factor = (
+                            X_train[channel_columns].sum().sum() / X_train_weighted[channel_columns].sum().sum()
+                        )
+
+                        # We apply the normalization factor to the optimized data.
+                        X_train_weighted[channel_columns] = (
+                            X_train_weighted[channel_columns] * normalization_factor
+                        )
+
+                        # We validate that the total spend is the same as in the original data.
+                        np.testing.assert_allclose(
+                            X_train_weighted[channel_columns].sum().sum(),
+                            X_train[channel_columns].sum().sum(),
+                        )
+
+                        fig, axes = plt.subplots(
+                            nrows=n_channels,
+                            ncols=1,
+                            figsize=(12, 3 * n_channels),
+                            sharex=True,
+                            sharey=False,
+                            layout="constrained",
+                        )
+
+                        for i, channel in enumerate(channel_columns):
+                            ax = axes[i]
+                            sns.lineplot(
+                                data=X_train,
+                                x=time_col,
+                                y=channel,
+                                color=f"C{i}",
+                                label=f"{channel} (original)",
+                                alpha=0.5,
+                                ax=ax,
+                            )
+                            sns.lineplot(
+                                data=X_train_weighted,
+                                x=time_col,
+                                y=channel,
+                                color=f"C{i}",
+                                linestyle="--",
+                                label=f"{channel} (optimized)",
+                                ax=ax,
+                            )
+                            ax.set(title=f"{channel}")
+
+                        ax.set_xlabel("date")
+
+                        fig.suptitle(
+                            "Original vs Optimized Budget Allocation (training data)",
+                            fontsize=18,
+                            fontweight="bold",
+                        )
+
+                        st.pyplot(fig, dpi=150)
+
+
+                        # 简单预期收益提示
+                        st.info("💡 此优化是反事实分析：如果当时按此分配，模型预测的贡献会更高（考虑饱和与延迟效应）。")
+
+                    except Exception as e:
+                        st.error(f"优化失败: {e}")
+
+    # ====================== Tab 2: 未来窗口优化 ======================
+    with tab2:
+        st.subheader("预算规划")
+        st.markdown("输入总预算和周期数")
+
+        train_df = st.session_state.train_df
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            start_date = st.date_input("开始日期", value=train_df[time_col].max() + timedelta(days=1))
+        with col2:
+            num_periods = st.number_input("优化周期数", value=52, min_value=1, help="每周数据建议 52（一年），每天数据用 365")
+            end_date = start_date + timedelta(weeks=num_periods)
+
+            hist_start_date = start_date - timedelta(weeks=52)  # 前一年的同一天开始
+            hist_end_date = end_date - timedelta(weeks=52)      # 前一年的同一天结束
+
+            hist_df = train_df[
+                (train_df[time_col].dt.date > hist_start_date) & 
+                (train_df[time_col].dt.date <= hist_end_date)
+            ]
+        with col3:
+            hist_total_budget = hist_df[channel_columns].sum().sum()
+            total_budget = st.number_input("总预算 (元)", min_value=0, value=int(hist_total_budget), step=1000, format="%d")
+
+        mean_spend_per_period = (
+            hist_df[channel_columns].sum(axis=0).div(hist_df.shape[0] * n_channels)
+        )
+
+        budget_bounds_hist = mean_spend_per_period.to_dict()
+
+        st.markdown("**每个渠道的预算控制**")
+        with st.expander(f"每个渠道的预算控制", expanded=True):
+            # 表头（保持单行）
+            col_widths_header = [1/3, 1, 1/2, 1, 1]
+            header_cols = st.columns(col_widths_header)
+            header_texts = ["#", "Channel name", "是否允许优化", "预算下限", "预算上限"]
+            for col, text in zip(header_cols, header_texts):
+                col.markdown(f"**{text}**")
+
+            budget_bounds = {}
+            for idx, ch in enumerate(channel_columns):
+                st.markdown('<hr style="margin:1px 0; border-top: 1px solid #eee">', unsafe_allow_html=True)
+                cols = st.columns(col_widths_header)
+                with cols[0]:
+                    st.write(idx + 1)
+                with cols[1]:
+                    st.write(ch)
+                with cols[2]:
+                    allow_opt = st.checkbox(f"是否允许优化", value=True, key=f"allow_{ch}", label_visibility="hidden")
+                if allow_opt:
+                    lower_temp = int((budget_bounds_hist[ch] * 0.7) /1000) *1000
+                    upper_temp = int((budget_bounds_hist[ch] * 1.3) /1000) *1000
+                    with cols[3]:
+                        lower = st.number_input(f"{ch} 下限", min_value=0, value=lower_temp, step=1000, key=f"low_{ch}", 
+                            label_visibility="hidden")
+                    with cols[4]:
+                        upper = st.number_input(f"{ch} 上限", min_value=0, value=upper_temp, step=1000, key=f"up_{ch}", 
+                            label_visibility="hidden")
+                    budget_bounds[ch] = (lower, upper)
+                else:
+                    budget_bounds[ch] = (0, 0)
+                    st.caption("该渠道不参与优化（预算固定为0）")
+
+            budget_bounds_xr = xr.DataArray(
+                data=list(budget_bounds.values()),
+                dims=["channel", "bound"],
+                coords={
+                    "channel": list(budget_bounds.keys()),
+                    "bound": ["lower", "upper"],
+                },
+            )
+
+        per_channel_budget = total_budget / (hist_df.shape[0] * n_channels)
+
+        if st.button("🚀 运行预算优化", type="primary", key="future_opt"):
+            with st.spinner("正在优化未来分配..."):
+                try:
+                    # Create the wrapper
+                    optimizable_model = MultiDimensionalBudgetOptimizerWrapper(
+                        model=mmm,
+                        start_date=str(start_date),
+                        end_date=str(end_date),
+                    )
+
+                    allocation_strategy, optimization_result = optimizable_model.optimize_budget(
+                        budget=per_channel_budget,
+                        budget_bounds=budget_bounds_xr,
+                        minimize_kwargs={
+                            "method": "SLSQP",
+                            "options": {"ftol": 1e-4, "maxiter": 10_000},
+                        },
+                    )
+
+                    # Sample response distribution
+                    response = optimizable_model.sample_response_distribution(
+                        allocation_strategy=allocation_strategy,
+                        additional_var_names=[
+                            "channel_contribution",
+                            "y",
+                        ],
+                        include_last_observations=True,
+                        include_carryover=True,
+                        noise_level=0.05,
+                    )
+
+                    st.success("优化完成！")
+
+                    # 可视化对比
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        fig, ax = plt.subplots()
+                        contribution_comparison_df = (
+                            pd.Series(allocation_strategy, index=mean_spend_per_period.index)
+                            .to_frame(name="optimized_allocation")
+                            .join(mean_spend_per_period.to_frame(name="hist_allocation"))
+                            .sort_index(ascending=False)
+                        )
+                        contribution_comparison_df.plot.barh(figsize=(12, 8), color=["C1", "C0"], ax=ax)
+                        ax.set(title="Budget Allocation Comparison", xlabel="allocation");
+                        st.pyplot(fig, dpi=150)
+
+                    with col_b:
+                        np.testing.assert_allclose(mean_spend_per_period.sum(), allocation_strategy.sum().item())
+                        fig, ax = optimizable_model.plot.budget_allocation(samples=response, figsize=(12, 8))
+                        st.pyplot(fig, dpi=150)
+
+                except Exception as e:
+                    st.error(f"优化失败: {e}")

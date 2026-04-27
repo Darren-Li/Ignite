@@ -49,15 +49,10 @@ streamlit run ignite.py
 - 📜 功能总览：
 	![demo](/docs/img/0.1home.png)
 - ⚠️ 异常分析
-	![demo](/docs/img/2.1abnormal_analysis.png)
 	![demo](/docs/img/2.2abnormal_analysis.png)
 - 👥 聚类分析
-	![demo](/docs/img/3.1clustering_analysis.png)
-	![demo](/docs/img/3.2clustering_analysis.png)
-	![demo](/docs/img/3.3clustering_analysis.png)
 	![demo](/docs/img/3.4clustering_analysis.png)
 	![demo](/docs/img/3.5clustering_analysis.png)
-	![demo](/docs/img/3.6clustering_analysis.png)
 - 📈 预测分析（回归/分类）
 	![demo](/docs/img/4.1predictive_analysis_calssification.png)
 	![demo](/docs/img/4.2predictive_analysis_calssification.png)

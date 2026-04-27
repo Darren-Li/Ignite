@@ -18,7 +18,7 @@ from services.data_loader import load_data, var_profiling
 # Page Config
 # =========================================================
 st.set_page_config(layout="wide")
-st.title("Uplift Modeling")
+st.title("Causal Inference")
 
 # =========================================================
 # Session State
@@ -43,7 +43,7 @@ step = st.sidebar.radio(
         "Step 2 – Variable Selection",
         "Step 3 – Modeling",
         "Step 4 – Evaluation",
-        "Step 5 – CRM Strategy",
+        "Step 5 – CRM Decision Panel",
         "Step 6 – Scoring"
     ]
 )
@@ -333,11 +333,11 @@ if step == "Step 4 – Evaluation":
     col1.pyplot(fig, dpi=150)
 
 # =========================================================
-# Step 5 - CRM Strategy
+# Step 5 - CRM Decision Panel
 # =========================================================
-if step == "Step 5 – CRM Strategy":
+if step == "Step 5 – CRM Decision Panel":
 
-    st.header("💡 CRM Decision Engine")
+    st.header("💡 CRM Decision Panel")
 
     df = st.session_state.processed_df
     model = st.session_state.model
@@ -416,7 +416,7 @@ if step == "Step 5 – CRM Strategy":
 # =========================================================
 if step == "Step 6 – Scoring":
 
-    st.header("Scoring")
+    st.header("Step 6: Scoring")
 
     artifact = joblib.load("config/uplift_artifact.pkl")
 

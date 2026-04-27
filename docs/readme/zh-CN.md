@@ -48,8 +48,6 @@ streamlit run ignite.py
 ## ▶️ 示例效果 
 - 📜 功能总览：
 	![demo](/docs/img/0.1home.png)
-- 📂 数据管理
-	![demo](/docs/img/1.1data_management.png)
 - ⚠️ 异常分析
 	![demo](/docs/img/2.1abnormal_analysis.png)
 	![demo](/docs/img/2.2abnormal_analysis.png)
@@ -63,6 +61,10 @@ streamlit run ignite.py
 - 📈 预测分析（回归/分类）
 	![demo](/docs/img/4.1predictive_analysis_calssification.png)
 	![demo](/docs/img/4.2predictive_analysis_calssification.png)
+- ⏳ 生存分析
+	![demo](/docs/img/6.1survival_model.png)
 - 💹 营销组合优化
 	![demo](/docs/img/5.1MMO.png)
 	![demo](/docs/img/5.2MMO.png)
+- 🔗 因果推断
+	![demo](/docs/img/7.1uplift_model.png)

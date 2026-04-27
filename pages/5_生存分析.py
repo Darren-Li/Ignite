@@ -19,7 +19,7 @@ from services.db_service import get_conn
 # Page Config
 # =========================================================
 st.set_page_config(layout="wide")
-st.title("Survival Analysis Engine")
+st.title("Survival Analysis")
 
 # =========================================================
 # Session State

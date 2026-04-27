@@ -200,7 +200,7 @@ feature_groups = {
       "description": "A/B测试"
     },
     {
-      "title": "因果推断(coming soon)",
+      "title": "因果推断",
       "icon": "🔗",
       "url": "/因果推断",
       "description": "因果推断"

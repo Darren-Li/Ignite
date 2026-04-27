@@ -52,8 +52,6 @@ streamlit run ignite.py
 
 - 📜 Feature Overview
 	![demo](/docs/img/0.1home.png)
-- 📂 Data Management
-	![demo](/docs/img/1.1data_management.png)
 - ⚠️ Anomaly Analysis
 	![demo](/docs/img/2.1abnormal_analysis.png)
 	![demo](/docs/img/2.2abnormal_analysis.png)
@@ -67,6 +65,10 @@ streamlit run ignite.py
 - 📈 Predictive Analysis (Regression / Classification)
 	![demo](/docs/img/4.1predictive_analysis_calssification.png)
 	![demo](/docs/img/4.2predictive_analysis_calssification.png)
+- ⏳ Survival Analysis
+	![demo](/docs/img/6.1survival_model.png)
 - 💹 Marketing Mix Optimization
 	![demo](/docs/img/5.1MMO.png)
 	![demo](/docs/img/5.2MMO.png)
+- 🔗 Causal Inference
+	![demo](/docs/img/7.1uplift_model.png)

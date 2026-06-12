@@ -175,7 +175,7 @@ if step == "Step 3 – Modeling":
         artifact["model"] = model
         joblib.dump(artifact, "config/uplift_artifact.pkl")
 
-        st.success("Model trained")
+        st.success("Model training completed successfully.")
 
 # =========================================================
 # Step 4 - Evaluation

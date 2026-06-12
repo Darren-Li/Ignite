@@ -296,7 +296,7 @@ if step == "Step 3 – Modeling" and st.session_state.processed_df is not None:
         st.session_state.X_test = X_test
         st.session_state.y_test = y_test
 
-        st.success("The model training was successful.")
+        st.success("Model training completed successfully.")
 
         # =========================================================
         # FINALIZE ARTIFACT AFTER MODEL TRAINING

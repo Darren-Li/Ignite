@@ -24,6 +24,7 @@ Thumbs.db
 *.log
 
 # 忽略根目录下的 temp 文件夹及其所有内容
+/config/
 /data/profiling/
 /data/raw/
 /models/

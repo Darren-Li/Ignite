@@ -1,6 +1,6 @@
 # 📊 Ignite - Data Analytics Platform
 
-A data analytics platform that can be used without deep knowledge of algorithms.
+A powerful data analytics platform that empowers users to uncover insights effortlessly, eliminating the need for deep algorithmic expertise.
 
 ![Python](https://img.shields.io/badge/Python-3.10-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
@@ -22,9 +22,10 @@ A data analytics platform that can be used without deep knowledge of algorithms.
 - 📂 Feature 1: Data Management  
 - ⚠️ Feature 2: Anomaly Analysis  
 - 👥 Feature 3: Clustering Analysis  
-- 📈 Feature 4: Predictive Analysis (Regression / Classification)  
-- 💹 Feature 5: Marketing Mix Optimization  
-
+- 📈 Feature 4: Predictive Analysis (Regression / Classification) 
+- ⏳ Feature 5: Survival Analysis
+- 💹 Feature 6: Marketing Mix Optimization  
+- 🔗 Feature 7: Causal Inference
 ---
 
 ## ⚙️ Installation and Usage

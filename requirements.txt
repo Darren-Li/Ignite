@@ -9,7 +9,7 @@ pymc_extras==0.10.0
 pymc_marketing==0.19.2
 nutpie==0.16.8
 PyYAML==6.0.3
-scikit_learn==1.8.0
+scikit_learn==1.7.0
 seaborn==0.13.2
 SQLAlchemy==2.0.49
 statsmodels==0.14.5
@@ -19,6 +19,6 @@ xgboost==3.2.0
 ydata_profiling==4.18.1
 h5netcdf
 netcdf4
-scikit-survival==0.25.0
+scikit-survival==0.26.0
 joblib==1.5.2
 econml==0.16.0

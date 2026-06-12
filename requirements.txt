@@ -9,7 +9,7 @@ pymc_extras==0.10.0
 pymc_marketing==0.19.2
 nutpie==0.16.8
 PyYAML==6.0.3
-scikit_learn==1.7.0
+scikit_learn==1.6.2
 seaborn==0.13.2
 SQLAlchemy==2.0.49
 statsmodels==0.14.5
